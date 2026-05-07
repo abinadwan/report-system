@@ -3,6 +3,7 @@ const monthLabels = ["يناير", "فبراير", "مارس", "أبريل", "م
 const q1Labels = ["يناير", "فبراير", "مارس"];
 let callsChart;
 let q1Chart;
+let logoState = { left: "", right: "" };
 
 const clamp = (v, min = 0, max = Number.POSITIVE_INFINITY) => Math.min(max, Math.max(min, Number(v) || 0));
 const f = (n) => Number(n || 0).toLocaleString("ar-SA");
@@ -20,9 +21,24 @@ function buildMonthInputs() {
 function get2025() { return monthLabels.map((_, i) => clamp(document.getElementById(`m2025_${i}`).value)); }
 function getQ1() { return ["jan2026", "feb2026", "mar2026"].map((id) => clamp(document.getElementById(id).value)); }
 
+function setLogoImage(slot, src) {
+  const img = document.getElementById(slot === "left" ? "logoLeft" : "logoRight");
+  const fallback = img.nextElementSibling;
+  if (src) {
+    img.src = src;
+    img.hidden = false;
+    fallback.hidden = true;
+  } else {
+    img.removeAttribute("src");
+    img.hidden = true;
+    fallback.hidden = false;
+  }
+}
+
 function saveState() {
   const data = {};
-  document.querySelectorAll("input").forEach((i) => data[i.id] = i.value);
+  document.querySelectorAll("input:not([type='file'])").forEach((i) => data[i.id] = i.value);
+  data.logoState = logoState;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -34,6 +50,27 @@ function restoreState() {
     const el = document.getElementById(id);
     if (el) el.value = value;
   });
+
+  logoState = data.logoState || { left: "", right: "" };
+  setLogoImage("left", logoState.left);
+  setLogoImage("right", logoState.right);
+}
+
+function handleLogoUpload(slot, file) {
+  if (!file) {
+    logoState[slot] = "";
+    setLogoImage(slot, "");
+    saveState();
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    logoState[slot] = String(reader.result || "");
+    setLogoImage(slot, logoState[slot]);
+    saveState();
+  };
+  reader.readAsDataURL(file);
 }
 
 function makeSummary({ total25, totalQ1, avg25, avgQ1, rate, speed, change }) {
@@ -91,6 +128,9 @@ function initCharts() {
 
 function resetData() {
   document.querySelectorAll("input").forEach((i) => i.value = "");
+  logoState = { left: "", right: "" };
+  setLogoImage("left", "");
+  setLogoImage("right", "");
   localStorage.removeItem(STORAGE_KEY);
   updateReport();
 }
@@ -99,7 +139,9 @@ function init() {
   buildMonthInputs();
   restoreState();
   initCharts();
-  document.querySelectorAll("input").forEach((el) => el.addEventListener("input", updateReport));
+  document.querySelectorAll("input:not([type='file'])").forEach((el) => el.addEventListener("input", updateReport));
+  document.getElementById("logoLeftUpload").addEventListener("change", (e) => handleLogoUpload("left", e.target.files[0]));
+  document.getElementById("logoRightUpload").addEventListener("change", (e) => handleLogoUpload("right", e.target.files[0]));
   document.getElementById("savePdfBtn").addEventListener("click", () => window.print());
   document.getElementById("resetBtn").addEventListener("click", resetData);
   updateReport();
