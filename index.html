@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
-  <title>تقرير اداء مختصر</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <title>تقرير تنفيذي داخلي</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -12,31 +12,39 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="app">
-    <aside class="panel">
-      <h2>بيانات التقرير</h2>
+  <main class="app-layout">
+    <aside class="panel" aria-label="لوحة إدخال البيانات">
+      <h2>لوحة إدخال البيانات</h2>
 
-      <div class="field"><label>العنوان الرئيسي</label><input id="title" placeholder="أدخل العنوان الرئيسي" /></div>
-      <div class="field"><label>العنوان الفرعي</label><input id="subtitle" placeholder="أدخل العنوان الفرعي" /></div>
-            <div class="field">
-        <label>مكالمات 2025</label>
+      <section class="panel-section">
+        <h3>المعلومات العامة للتقرير</h3>
+        <div class="field"><label for="title">العنوان الرئيسي</label><input id="title" type="text" /></div>
+        <div class="field"><label for="subtitle">العنوان الفرعي</label><input id="subtitle" type="text" /></div>
+        <div class="field"><label for="department">الإدارة / الجهة</label><input id="department" type="text" /></div>
+      </section>
+
+      <section class="panel-section">
+        <h3>مكالمات 2025 الشهرية</h3>
         <div class="month-grid" id="months2025"></div>
-      </div>
+      </section>
 
-      <div class="field">
-        <label>مكالمات الربع الأول 2026</label>
-        <div class="month-grid">
-          <div class="month-input"><label for="jan2026">يناير 2026</label><input id="jan2026" type="number" min="0" placeholder="يناير" /></div>
-          <div class="month-input"><label for="feb2026">فبراير 2026</label><input id="feb2026" type="number" min="0" placeholder="فبراير" /></div>
-          <div class="month-input"><label for="mar2026">مارس 2026</label><input id="mar2026" type="number" min="0" placeholder="مارس" /></div>
+      <section class="panel-section">
+        <h3>مكالمات الربع الأول 2026</h3>
+        <div class="month-grid q1-grid">
+          <div class="month-input"><label for="jan2026">يناير 2026</label><input id="jan2026" type="number" min="0" /></div>
+          <div class="month-input"><label for="feb2026">فبراير 2026</label><input id="feb2026" type="number" min="0" /></div>
+          <div class="month-input"><label for="mar2026">مارس 2026</label><input id="mar2026" type="number" min="0" /></div>
         </div>
-      </div>
+      </section>
 
-      <div class="field"><label>معدل الإجابة 2026</label><input id="answerRate" type="number" min="0" max="100" step="0.01" placeholder="0 - 100" /></div>
-      <div class="field"><label>متوسط سرعة الرد / ثانية</label><input id="avgSpeed" type="number" min="0" placeholder="أدخل القيمة" /></div>
+      <section class="panel-section">
+        <h3>مؤشرات الأداء الرئيسية (KPIs)</h3>
+        <div class="field"><label for="answerRate">معدل الإجابة 2026 (%)</label><input id="answerRate" type="number" min="0" max="100" step="0.01" /></div>
+        <div class="field"><label for="avgSpeed">متوسط سرعة الرد (ثانية)</label><input id="avgSpeed" type="number" min="0" step="0.01" /></div>
+      </section>
 
       <div class="btn-row">
-        <button class="primary" id="savePdfBtn" type="button">حفظ PDF</button>
+        <button class="primary" id="savePdfBtn" type="button">تصدير PDF</button>
         <button class="secondary" id="resetBtn" type="button">إعادة الضبط</button>
       </div>
     </aside>
@@ -44,42 +52,52 @@
     <section class="preview-wrap">
       <article class="report" id="report">
         <header class="report-header">
-          <h1 class="report-title" id="rTitle"></h1>
-          <p class="report-subtitle" id="rSubtitle"></p>
+          <div class="logo-slot">
+            <img src="assets/sdaia-logo.png" alt="شعار سدايا" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+            <span class="fallback-logo" hidden>شعار سدايا</span>
+          </div>
+          <div class="header-text">
+            <h1 id="rTitle">تقرير تنفيذي داخلي</h1>
+            <p id="rSubtitle">ملخص أداء مركز الاتصال</p>
+          </div>
+          <div class="logo-slot">
+            <img src="assets/ai-year-logo.png" alt="شعار عام الذكاء الاصطناعي" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+            <span class="fallback-logo" hidden>شعار عام الذكاء الاصطناعي</span>
+          </div>
         </header>
 
-        <div class="empty-state" id="emptyState">سيظهر محتوى التقرير هنا بعد تعبئة البيانات من المستخدم.</div>
-        <div class="content" id="reportContent">
-          <h3 class="section-title">الأداء بالأرقام</h3>
-          <div class="kpis">
-            <div class="kpi"><div class="label">إجمالي مكالمات 2025</div><div class="value" id="total2025"></div></div>
-            <div class="kpi"><div class="label">مكالمات Q1 2026</div><div class="value" id="q12026"></div></div>
-            <div class="kpi"><div class="label">معدل الإجابة 2026</div><div class="value" id="rate2026"></div></div>
-            <div class="kpi"><div class="label">متوسط سرعة الرد</div><div class="value" id="speed2026"></div></div>
+        <section class="report-body">
+          <h3 class="section-title">الأرقام الرئيسية</h3>
+          <div class="kpi-grid">
+            <article class="kpi"><span>إجمالي مكالمات 2025</span><strong id="total2025">0</strong></article>
+            <article class="kpi"><span>متوسط 2025 الشهري</span><strong id="avg2025">0</strong></article>
+            <article class="kpi"><span>إجمالي Q1 2026</span><strong id="q12026">0</strong></article>
+            <article class="kpi"><span>متوسط Q1 الشهري</span><strong id="avgQ1">0</strong></article>
+            <article class="kpi"><span>معدل الإجابة 2026</span><strong id="rate2026">0%</strong></article>
+            <article class="kpi"><span>متوسط سرعة الرد</span><strong id="speed2026">0 ث</strong></article>
+            <article class="kpi wide"><span>النمو / التراجع مقابل متوسط 2025</span><strong id="growthNote">—</strong></article>
           </div>
 
-          <div class="grid-2">
+          <div class="charts-grid">
             <section class="card chart-card"><h3 class="section-title">مكالمات 2025 شهريًا</h3><canvas id="callsChart"></canvas></section>
-            <section class="card chart-card"><h3 class="section-title">مكالمات الربع الأول 2026</h3><canvas id="q1Chart"></canvas></section>
+            <section class="card chart-card"><h3 class="section-title">توزيع Q1 2026</h3><canvas id="q1Chart"></canvas></section>
           </div>
 
-          <section class="card">
-            <h3 class="section-title">مقارنة مختصرة</h3>
-            <table class="table">
-              <thead><tr><th>المؤشر</th><th>القيمة</th><th>الملاحظة</th></tr></thead>
-              <tbody>
-                <tr><td>متوسط مكالمات 2025 شهريًا</td><td id="avg2025"></td><td>خط الأساس السنوي</td></tr>
-                <tr><td>متوسط Q1 2026 شهريًا</td><td id="avgQ1"></td><td id="growthNote"></td></tr>
-                <tr><td>أعلى شهر في Q1 2026</td><td id="topMonth"></td><td>مؤشر ضغط تشغيلي</td></tr>
-              </tbody>
-            </table>
+          <section class="card summary-card">
+            <h3 class="section-title">الملخص التنفيذي</h3>
+            <p id="execSummary"></p>
           </section>
+        </section>
 
-          <div class="footer"><span>تقرير داخلي — مركز الاتصال الداخلي</span><span id="today"></span></div>
-        </div>
+        <footer class="report-footer">
+          <span>تقرير داخلي للاستخدام التنفيذي فقط</span>
+          <span id="today"></span>
+          <span>Executive Reporting Tool</span>
+        </footer>
       </article>
     </section>
   </main>
+
   <script src="app.js"></script>
 </body>
 </html>
