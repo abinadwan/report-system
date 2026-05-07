@@ -16,10 +16,10 @@
     <aside class="panel">
       <h2>بيانات التقرير</h2>
 
-      <div class="field"><label>العنوان الرئيسي</label><input id="title" value="الإدارة العامة لخدمات التحول الرقمي" /></div>
-      <div class="field"><label>العنوان الفرعي</label><input id="subtitle" value="مركز الاتصال الداخلي" /></div>
-      <div class="field"><label>تاريخ التأسيس</label><input id="established" value="2024/08/01" /></div>
-      <div class="field"><label>نطاق عمل المركز</label><textarea id="scope">يتعامل المركز مع الاستفسارات والطلبات والبلاغات التقنية والشكاوى.</textarea></div>
+      <div class="field"><label>العنوان الرئيسي</label><input id="title" placeholder="أدخل العنوان الرئيسي" /></div>
+      <div class="field"><label>العنوان الفرعي</label><input id="subtitle" placeholder="أدخل العنوان الفرعي" /></div>
+      <div class="field"><label>تاريخ التأسيس</label><input id="established" placeholder="YYYY/MM/DD" /></div>
+      <div class="field"><label>نطاق عمل المركز</label><textarea id="scope" placeholder="اكتب نطاق عمل المركز"></textarea></div>
 
       <div class="field">
         <label>مكالمات 2025</label>
@@ -29,14 +29,14 @@
       <div class="field">
         <label>مكالمات الربع الأول 2026</label>
         <div class="month-grid">
-          <input id="jan2026" type="number" min="0" value="911" placeholder="Jan" />
-          <input id="feb2026" type="number" min="0" value="1064" placeholder="Feb" />
-          <input id="mar2026" type="number" min="0" value="805" placeholder="Mar" />
+          <input id="jan2026" type="number" min="0" placeholder="Jan" />
+          <input id="feb2026" type="number" min="0" placeholder="Feb" />
+          <input id="mar2026" type="number" min="0" placeholder="Mar" />
         </div>
       </div>
 
-      <div class="field"><label>معدل الإجابة 2026</label><input id="answerRate" type="number" min="0" max="100" step="0.01" value="73.53" /></div>
-      <div class="field"><label>متوسط سرعة الرد / ثانية</label><input id="avgSpeed" type="number" min="0" value="21" /></div>
+      <div class="field"><label>معدل الإجابة 2026</label><input id="answerRate" type="number" min="0" max="100" step="0.01" placeholder="0 - 100" /></div>
+      <div class="field"><label>متوسط سرعة الرد / ثانية</label><input id="avgSpeed" type="number" min="0" placeholder="أدخل القيمة" /></div>
 
       <div class="btn-row">
         <button class="primary" id="savePdfBtn" type="button">حفظ PDF</button>
@@ -47,15 +47,12 @@
     <section class="preview-wrap">
       <article class="report" id="report">
         <header class="report-header">
-          <div class="logos">
-            <div class="logo-box image-logo"><img src="assets/sdaia-logo.svg" alt="SDAIA Logo"><span>شعار سدايا</span></div>
-            <div class="logo-box image-logo"><img src="assets/ai-year-logo.png" alt="AI Year Logo"><span>عام الذكاء الاصطناعي</span></div>
-          </div>
           <h1 class="report-title" id="rTitle"></h1>
           <p class="report-subtitle" id="rSubtitle"></p>
         </header>
 
-        <div class="content">
+        <div class="empty-state" id="emptyState">سيظهر محتوى التقرير هنا بعد تعبئة البيانات من المستخدم.</div>
+        <div class="content" id="reportContent">
           <div class="grid-2">
             <section class="card">
               <h3 class="section-title">مراحل المركز</h3>
