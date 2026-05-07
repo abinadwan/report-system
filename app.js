@@ -42,7 +42,7 @@ function calcAverage(values) {
 }
 
 function updateReport() {
-  const requiredFields = ["title", "subtitle", "established", "scope", "jan2026", "feb2026", "mar2026", "answerRate", "avgSpeed"];
+  const requiredFields = ["title", "subtitle", "jan2026", "feb2026", "mar2026", "answerRate", "avgSpeed"];
   const hasRequiredData = requiredFields.every((id) => document.getElementById(id).value.toString().trim() !== "")
     && monthLabels.every((_, index) => document.getElementById(`m2025_${index}`).value.toString().trim() !== "");
   document.getElementById("report").classList.toggle("ready", hasRequiredData);
@@ -61,7 +61,6 @@ function updateReport() {
 
   document.getElementById("rTitle").textContent = document.getElementById("title").value;
   document.getElementById("rSubtitle").textContent = document.getElementById("subtitle").value;
-  document.getElementById("rEstablished").textContent = `تأسس مركز الاتصال في ${document.getElementById("established").value}. ${document.getElementById("scope").value}`;
   document.getElementById("total2025").textContent = formatNumber(total25);
   document.getElementById("q12026").textContent = formatNumber(totalQ1);
   document.getElementById("rate2026").textContent = `${answerRate.toFixed(2)}%`;
@@ -71,7 +70,6 @@ function updateReport() {
   document.getElementById("growthNote").textContent = change >= 0 ? `ارتفاع ${change.toFixed(1)}%` : `انخفاض ${Math.abs(change).toFixed(1)}%`;
   document.getElementById("topMonth").textContent = `${q1Labels[topIndex]} — ${formatNumber(valuesQ1[topIndex])}`;
   document.getElementById("today").textContent = new Date().toLocaleDateString("ar-SA");
-  document.getElementById("autoInsight").textContent = `ملخص تنفيذي: بلغ إجمالي مكالمات الربع الأول من عام 2026 عدد ${formatNumber(totalQ1)} مكالمة، بمتوسط شهري ${formatNumber(Math.round(avgQ1))} مكالمة. ويعكس ذلك ${change >= 0 ? "نموًا" : "انخفاضًا"} قدره ${Math.abs(change).toFixed(1)}% مقارنة بمتوسط عام 2025، مع تسجيل ${q1Labels[topIndex]} أعلى حجم مكالمات خلال الربع.`;
 
   if (callsChart && q1Chart) {
     callsChart.data.datasets[0].data = values2025;
