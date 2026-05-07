@@ -18,6 +18,13 @@ function buildMonthInputs() {
   const container = document.getElementById("months2025");
   container.innerHTML = "";
   monthLabels.forEach((label, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "month-input";
+
+    const monthLabel = document.createElement("label");
+    monthLabel.htmlFor = `m2025_${index}`;
+    monthLabel.textContent = `${label} 2025`;
+
     const input = document.createElement("input");
     input.type = "number";
     input.min = "0";
@@ -25,7 +32,10 @@ function buildMonthInputs() {
     input.value = defaults2025[index];
     input.placeholder = label;
     input.addEventListener("input", updateReport);
-    container.appendChild(input);
+
+    wrapper.appendChild(monthLabel);
+    wrapper.appendChild(input);
+    container.appendChild(wrapper);
   });
 }
 
