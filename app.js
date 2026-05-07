@@ -1,4 +1,4 @@
-const defaults2025 = [420, 510, 610, 590, 680, 730, 760, 810, 870, 920, 990, 1040];
+const defaults2025 = Array.from({ length: 12 }, () => "");
 const monthLabels = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 const q1Labels = ["يناير", "فبراير", "مارس"];
 let callsChart;
@@ -42,6 +42,12 @@ function calcAverage(values) {
 }
 
 function updateReport() {
+  const requiredFields = ["title", "subtitle", "established", "scope", "jan2026", "feb2026", "mar2026", "answerRate", "avgSpeed"];
+  const hasRequiredData = requiredFields.every((id) => document.getElementById(id).value.toString().trim() !== "")
+    && monthLabels.every((_, index) => document.getElementById(`m2025_${index}`).value.toString().trim() !== "");
+  document.getElementById("report").classList.toggle("ready", hasRequiredData);
+  if (!hasRequiredData) return;
+
   const values2025 = get2025Values();
   const valuesQ1 = getQ1Values();
   const total25 = values2025.reduce((sum, n) => sum + n, 0);
@@ -101,12 +107,8 @@ function initCharts() {
 }
 
 function resetData() {
+  document.querySelectorAll("input, textarea").forEach((el) => (el.value = ""));
   defaults2025.forEach((value, index) => (document.getElementById(`m2025_${index}`).value = value));
-  document.getElementById("jan2026").value = 911;
-  document.getElementById("feb2026").value = 1064;
-  document.getElementById("mar2026").value = 805;
-  document.getElementById("answerRate").value = 73.53;
-  document.getElementById("avgSpeed").value = 21;
   updateReport();
 }
 
