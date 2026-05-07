@@ -24,6 +24,12 @@
       </section>
 
       <section class="panel-section">
+        <h3>رفع الشعارات</h3>
+        <div class="field"><label for="logoLeftUpload">الشعار الأيمن في الترويسة</label><input id="logoLeftUpload" type="file" accept="image/*,.svg,.png" /></div>
+        <div class="field"><label for="logoRightUpload">الشعار الأيسر في الترويسة</label><input id="logoRightUpload" type="file" accept="image/*,.svg,.png" /></div>
+      </section>
+
+      <section class="panel-section">
         <h3>مكالمات 2025 الشهرية</h3>
         <div class="month-grid" id="months2025"></div>
       </section>
@@ -53,16 +59,16 @@
       <article class="report" id="report">
         <header class="report-header">
           <div class="logo-slot">
-            <img src="assets/sdaia-logo.png" alt="شعار سدايا" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
-            <span class="fallback-logo" hidden>شعار سدايا</span>
+            <img id="logoLeft" alt="شعار مرفوع" hidden>
+            <span class="fallback-logo">ارفع شعارًا</span>
           </div>
           <div class="header-text">
             <h1 id="rTitle">تقرير تنفيذي داخلي</h1>
             <p id="rSubtitle">ملخص أداء مركز الاتصال</p>
           </div>
           <div class="logo-slot">
-            <img src="assets/ai-year-logo.png" alt="شعار عام الذكاء الاصطناعي" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
-            <span class="fallback-logo" hidden>شعار عام الذكاء الاصطناعي</span>
+            <img id="logoRight" alt="شعار مرفوع" hidden>
+            <span class="fallback-logo">ارفع شعارًا</span>
           </div>
         </header>
 
