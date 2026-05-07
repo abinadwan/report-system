@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تقرير مركز الاتصال الداخلي</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <aside class="panel">
+      <h2>بيانات التقرير</h2>
+
+      <div class="field"><label>العنوان الرئيسي</label><input id="title" value="الإدارة العامة لخدمات التحول الرقمي" /></div>
+      <div class="field"><label>العنوان الفرعي</label><input id="subtitle" value="مركز الاتصال الداخلي" /></div>
+      <div class="field"><label>تاريخ التأسيس</label><input id="established" value="2024/08/01" /></div>
+      <div class="field"><label>نطاق عمل المركز</label><textarea id="scope">يتعامل المركز مع الاستفسارات والطلبات والبلاغات التقنية والشكاوى.</textarea></div>
+
+      <div class="field">
+        <label>مكالمات 2025</label>
+        <div class="month-grid" id="months2025"></div>
+      </div>
+
+      <div class="field">
+        <label>مكالمات الربع الأول 2026</label>
+        <div class="month-grid">
+          <input id="jan2026" type="number" value="911" placeholder="Jan" />
+          <input id="feb2026" type="number" value="1064" placeholder="Feb" />
+          <input id="mar2026" type="number" value="805" placeholder="Mar" />
+        </div>
+      </div>
+
+      <div class="field"><label>معدل الإجابة 2026</label><input id="answerRate" type="number" step="0.01" value="73.53" /></div>
+      <div class="field"><label>متوسط سرعة الرد / ثانية</label><input id="avgSpeed" type="number" value="21" /></div>
+
+      <div class="btn-row">
+        <button class="primary" onclick="window.print()">حفظ PDF</button>
+        <button class="secondary" onclick="resetData()">إعادة الضبط</button>
+      </div>
+    </aside>
+
+    <section class="preview-wrap">
+      <article class="report" id="report">
+        <header class="report-header">
+          <div class="logos">
+            <div class="logo-box image-logo"><img src="assets/sdaia-logo.png" alt="SDAIA Logo"><span>شعار سدايا</span></div>
+            <div class="logo-box image-logo"><img src="assets/ai-year-logo.png" alt="AI Year Logo"><span>عام الذكاء الاصطناعي</span></div>
+          </div>
+          <h1 class="report-title" id="rTitle"></h1>
+          <p class="report-subtitle" id="rSubtitle"></p>
+        </header>
+
+        <div class="content">
+          <div class="grid-2">
+            <section class="card">
+              <h3 class="section-title">مراحل المركز</h3>
+              <div class="timeline">
+                <div class="step"><div class="dot">1</div><div><strong>التأسيس</strong><p id="rEstablished"></p></div></div>
+                <div class="step"><div class="dot">2</div><div><strong>تفعيل القنوات</strong><p>استقبال الاستفسارات والطلبات والبلاغات التقنية والشكاوى.</p></div></div>
+                <div class="step"><div class="dot">3</div><div><strong>القياس والتحسين</strong><p>توثيق التفاعلات وتحليل الأداء لدعم القرار.</p></div></div>
+              </div>
+            </section>
+
+            <section class="card">
+              <h3 class="section-title">أهداف مركز الاتصال</h3>
+              <ul class="goals">
+                <li>رفع مستوى رضا موظفي الهيئة عن الخدمات التقنية.</li>
+                <li>تحسين تجربة المستخدم الداخلي.</li>
+                <li>تسريع الاستجابة ومعالجة البلاغات.</li>
+                <li>توثيق التفاعلات والطلبات بشكل قابل للتحليل.</li>
+              </ul>
+            </section>
+          </div>
+
+          <h3 class="section-title">الأداء بالأرقام</h3>
+          <div class="kpis">
+            <div class="kpi"><div class="label">إجمالي مكالمات 2025</div><div class="value" id="total2025"></div></div>
+            <div class="kpi"><div class="label">مكالمات Q1 2026</div><div class="value" id="q12026"></div></div>
+            <div class="kpi"><div class="label">معدل الإجابة 2026</div><div class="value" id="rate2026"></div></div>
+            <div class="kpi"><div class="label">متوسط سرعة الرد</div><div class="value" id="speed2026"></div></div>
+          </div>
+
+          <div class="grid-2">
+            <section class="card chart-card"><h3 class="section-title">مكالمات 2025 شهريًا</h3><canvas id="callsChart"></canvas></section>
+            <section class="card chart-card"><h3 class="section-title">مكالمات الربع الأول 2026</h3><canvas id="q1Chart"></canvas></section>
+          </div>
+
+          <section class="card">
+            <h3 class="section-title">مقارنة مختصرة</h3>
+            <table class="table">
+              <thead><tr><th>المؤشر</th><th>القيمة</th><th>الملاحظة</th></tr></thead>
+              <tbody>
+                <tr><td>متوسط مكالمات 2025 شهريًا</td><td id="avg2025"></td><td>خط الأساس السنوي</td></tr>
+                <tr><td>متوسط Q1 2026 شهريًا</td><td id="avgQ1"></td><td id="growthNote"></td></tr>
+                <tr><td>أعلى شهر في Q1 2026</td><td id="topMonth"></td><td>مؤشر ضغط تشغيلي</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <div class="insight" id="autoInsight"></div>
+          <div class="footer"><span>تقرير داخلي — مركز الاتصال الداخلي</span><span id="today"></span></div>
+        </div>
+      </article>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
