@@ -1,62 +1,101 @@
 :root {
-  --navy: #1f3c88;
-  --teal: #0f9d8a;
-  --dark-teal: #0b6b5e;
-  --blue: #2f6fed;
-  --purple: #5b3fd6;
-  --orange: #f2994a;
-  --bg: #f7f9fc;
-  --border: #e3e9f3;
-  --text: #1f2a44;
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:"Markazi Text",serif;background:var(--bg);color:var(--text);font-size:22px}
-.app-layout{display:grid;grid-template-columns:360px 1fr;gap:20px;padding:20px;max-width:1500px;margin:0 auto}
-.panel{background:#fff;border:1px solid var(--border);border-radius:20px;padding:16px;position:sticky;top:20px;height:calc(100vh - 40px);overflow:auto}
-.panel h2{margin:0 0 10px;color:var(--navy)}
-.panel-section{padding:12px;border:1px solid var(--border);border-radius:14px;margin-bottom:10px;background:#fcfdff}
-.panel-section h3{margin:0 0 8px;color:var(--dark-teal);font-size:24px}
-.field{margin-bottom:8px}
-label{display:block;font-weight:600;margin-bottom:4px}
-input{width:100%;padding:8px 10px;border:1px solid #cfd7e6;border-radius:10px;font-family:inherit;font-size:20px}
-.month-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.q1-grid{grid-template-columns:1fr}
-.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-button{border:none;border-radius:12px;padding:10px;font-family:inherit;font-size:22px;cursor:pointer}
-.primary{background:linear-gradient(120deg,var(--navy),var(--teal));color:#fff}
-.secondary{background:#eaf0ff;color:var(--navy)}
-.preview-wrap{overflow:auto}
-.report{width:210mm;min-height:297mm;background:#fff;box-shadow:0 10px 30px rgba(31,60,136,.15);margin:0 auto;display:flex;flex-direction:column}
-.report-header{padding:16mm 14mm 10mm;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;display:grid;grid-template-columns:90px 1fr 90px;align-items:center;gap:8px}
-.logo-slot{height:70px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.14);border-radius:10px}
-.logo-slot img{max-width:100%;max-height:62px;object-fit:contain}
-.fallback-logo{font-size:16px;text-align:center;line-height:1.2;padding:4px}
-.header-text h1{margin:0;font-size:42px}
-.header-text p{margin:4px 0 0;font-size:27px}
-.report-body{padding:10mm 14mm;flex:1}
-.section-title{margin:0 0 8px;color:var(--navy);font-size:30px}
-.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
-.kpi{border:1px solid var(--border);border-radius:12px;padding:8px;background:#fbfdff}
-.kpi span{display:block;color:#5c6a84;font-size:19px}
-.kpi strong{font-size:30px;color:var(--navy)}
-.kpi.wide{grid-column:span 3;background:linear-gradient(120deg,#f5fffc,#f3f6ff)}
-.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.card{border:1px solid var(--border);border-radius:12px;padding:8px;background:#fff}
-.chart-card{height:280px}
-.chart-card canvas{height:210px !important}
-.summary-card p{margin:0;line-height:1.4}
-.report-footer{border-top:1px solid var(--border);padding:6mm 14mm;display:flex;justify-content:space-between;color:#5e6b81;font-size:18px}
-
-@media (max-width: 1100px){
-  .app-layout{grid-template-columns:1fr}
-  .panel{position:static;height:auto}
+  --bg: #f6f9ff;
+  --surface: #ffffff;
+  --text: #1a2a47;
+  --muted: #5d6d8c;
+  --border: #dce5f3;
+  --header-start: #1f3c88;
+  --header-end: #2f6fed;
+  --kpi-accent: #0f9d8a;
+  --footer-bg: #eef3ff;
+  --chart-1: #2f6fed;
+  --chart-2: #0f9d8a;
+  --chart-3: #f2994a;
 }
 
-@media print{
-  @page{size:A4 portrait;margin:10mm}
-  body{background:#fff}
-  .app-layout{display:block;padding:0;max-width:none}
-  .panel{display:none}
-  .report{box-shadow:none;margin:0;width:190mm;min-height:277mm}
-  .chart-card{break-inside:avoid;page-break-inside:avoid}
+body[data-theme="light"] {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --text: #222;
+  --muted: #606b7a;
+  --border: #dde3ea;
+  --header-start: #4370b8;
+  --header-end: #88abd9;
+  --kpi-accent: #4c8bff;
+  --footer-bg: #f0f5ff;
+  --chart-1: #4c8bff;
+  --chart-2: #7bb0ff;
+  --chart-3: #f6b35c;
+}
+
+body[data-theme="dark-executive"] {
+  --bg: #0e1524;
+  --surface: #152036;
+  --text: #edf3ff;
+  --muted: #afbdd8;
+  --border: #283754;
+  --header-start: #0b2b52;
+  --header-end: #1e4e85;
+  --kpi-accent: #2fc2a5;
+  --footer-bg: #121d31;
+  --chart-1: #3b82f6;
+  --chart-2: #14b8a6;
+  --chart-3: #f59e0b;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Markazi Text", serif; font-size: 22px; background: var(--bg); color: var(--text); }
+.app-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; padding: 20px; max-width: 1550px; margin: 0 auto; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px; }
+.controls { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow: auto; }
+.panel-section { border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-bottom: 12px; }
+h2, h3 { margin: 0 0 8px; }
+input, select, button { font-family: inherit; font-size: 20px; }
+input, select { width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 8px; background: #fff; }
+label { display: block; margin-bottom: 4px; font-weight: 600; }
+.field { margin-bottom: 8px; }
+.report-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+button { border: none; border-radius: 10px; padding: 9px; cursor: pointer; }
+.primary { background: linear-gradient(120deg, var(--header-start), var(--header-end)); color: #fff; }
+.secondary { background: #edf2ff; color: #1f3c88; }
+.danger { background: #fdecec; color: #991b1b; }
+.full { width: 100%; }
+.status { font-size: 18px; color: var(--muted); margin: 6px 0; }
+.report-list { border: 1px solid var(--border); border-radius: 10px; max-height: 170px; overflow: auto; padding: 6px; }
+.report-list button { width: 100%; text-align: right; margin-bottom: 4px; background: #f7f9ff; border: 1px solid transparent; }
+.report-list button.active { border-color: var(--kpi-accent); background: #e9fff9; }
+.month-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.q1-grid { grid-template-columns: 1fr; }
+.preview-wrap { overflow: auto; }
+.report { width: 210mm; min-height: 297mm; background: var(--surface); margin: 0 auto; box-shadow: 0 10px 28px rgba(0,0,0,.12); display: flex; flex-direction: column; }
+.report-header { padding: 12mm 14mm; background: linear-gradient(135deg, var(--header-start), var(--header-end)); color: #fff; display: grid; grid-template-columns: 85px 1fr 85px; align-items: center; gap: 8px; }
+.header-logo { width: 80px; height: 80px; object-fit: contain; background: rgba(255,255,255,.16); border-radius: 10px; padding: 5px; }
+.header-text h1 { margin: 0; font-size: 42px; }
+.header-text p { margin: 2px 0; font-size: 26px; }
+.report-body { padding: 10mm 14mm; flex: 1; }
+.meta-row { display: flex; justify-content: space-between; color: var(--muted); margin-bottom: 8px; }
+.section-title { margin: 0 0 8px; font-size: 30px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.kpi { border: 1px solid var(--border); border-right: 5px solid var(--kpi-accent); border-radius: 10px; padding: 8px; }
+.kpi span { color: var(--muted); display: block; }
+.kpi strong { font-size: 30px; }
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.card { border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
+.chart-card { min-height: 270px; }
+.chart-card canvas { height: 200px !important; }
+.summary-card p { margin: 0; line-height: 1.45; }
+.report-footer { border-top: 1px solid var(--border); background: var(--footer-bg); padding: 5mm 14mm; display: flex; justify-content: space-between; color: var(--muted); }
+
+@media (max-width: 1100px) {
+  .app-layout { grid-template-columns: 1fr; }
+  .controls { position: static; max-height: none; }
+  .preview-wrap { order: 3; }
+}
+
+@media print {
+  @page { size: A4 portrait; margin: 10mm; }
+  body { background: #fff; }
+  .controls { display: none !important; }
+  .app-layout { display: block; padding: 0; max-width: none; }
+  .report { box-shadow: none; margin: 0 auto; width: 190mm; min-height: 277mm; }
+  .chart-card { break-inside: avoid; page-break-inside: avoid; }
 }
