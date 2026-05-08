@@ -42,6 +42,15 @@
             <option value="dark-executive">Dark Executive</option>
           </select>
         </div>
+        <div class="field">
+          <label for="logoUploadInput">شعار التقرير</label>
+          <input id="logoUploadInput" type="file" accept=".png,.jpg,.jpeg,.svg,.webp,image/png,image/jpeg,image/svg+xml,image/webp" hidden />
+          <div class="logo-controls">
+            <button id="uploadLogoBtn" type="button" class="secondary">رفع شعار</button>
+            <button id="removeLogoBtn" type="button" class="danger">إزالة الشعار</button>
+          </div>
+          <small id="logoStatus" class="status">لا يوجد شعار مرفوع لهذا التقرير</small>
+        </div>
       </section>
 
       <section class="panel-section">
@@ -72,13 +81,12 @@
     <section class="preview-wrap">
       <article class="report" id="report">
         <header class="report-header">
-          <img class="header-logo" src="assets/sdaia-logo.png" alt="SDAIA Logo" />
+          <img id="headerLogo" class="header-logo" alt="شعار التقرير" hidden />
           <div class="header-text">
             <h1 id="rTitle">تقرير تنفيذي داخلي</h1>
             <p id="rSubtitle">ملخص أداء مركز الاتصال</p>
             <small id="rScope">نطاق التقرير: —</small>
           </div>
-          <img class="header-logo" src="assets/ai-year-logo.png" alt="AI Year Logo" />
         </header>
 
         <section class="report-body">

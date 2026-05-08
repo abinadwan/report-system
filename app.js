@@ -10,6 +10,54 @@ const n = (value, max = Number.POSITIVE_INFINITY) => Math.min(max, Math.max(0, N
 const f = (value) => Number(value || 0).toLocaleString("ar-SA");
 const today = () => new Date().toLocaleDateString("ar-SA");
 
+const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/svg+xml", "image/webp"]);
+
+function updateLogoUI(report) {
+  const hasLogo = Boolean(report.logoDataUrl);
+  const headerLogo = $("headerLogo");
+  const reportHeader = document.querySelector(".report-header");
+  if (hasLogo) {
+    headerLogo.src = report.logoDataUrl;
+    headerLogo.hidden = false;
+    reportHeader.classList.remove("no-logo");
+    $("logoStatus").textContent = "تم تحميل شعار لهذا التقرير";
+  } else {
+    headerLogo.removeAttribute("src");
+    headerLogo.hidden = true;
+    reportHeader.classList.add("no-logo");
+    $("logoStatus").textContent = "لا يوجد شعار مرفوع لهذا التقرير";
+  }
+}
+
+function setActiveReportLogo(logoDataUrl) {
+  const reports = getReports();
+  const idx = reports.findIndex((r) => r.id === getActiveId());
+  if (idx < 0) return;
+  reports[idx].logoDataUrl = logoDataUrl;
+  reports[idx].updatedAt = new Date().toISOString();
+  saveReports(reports);
+  renderReportList();
+  updateReportPreview();
+  $("autosaveStatus").textContent = "تم حفظ الشعار";
+}
+
+function handleLogoUpload(file) {
+  if (!file) return;
+  const fileType = file.type.toLowerCase();
+  const fileExt = file.name.split(".").pop()?.toLowerCase();
+  const validExt = ["png", "jpg", "jpeg", "svg", "webp"].includes(fileExt || "");
+  if (!ALLOWED_LOGO_TYPES.has(fileType) && !validExt) {
+    alert("صيغة الشعار غير مدعومة. يرجى استخدام PNG أو JPG أو SVG أو WEBP.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (typeof reader.result === "string") setActiveReportLogo(reader.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+
 function createReport(seedName = "تقرير جديد") {
   const now = new Date().toISOString();
   return {
@@ -21,7 +69,8 @@ function createReport(seedName = "تقرير جديد") {
     calls2025: new Array(12).fill(0),
     q1_2026: { jan: 0, feb: 0, mar: 0 },
     kpis: { answerRate2026: 0, averageResponseSpeed: 0 },
-    theme: "sdaia"
+    theme: "sdaia",
+    logoDataUrl: ""
   };
 }
 
@@ -182,6 +231,7 @@ function updateReportPreview() {
   $("execSummary").textContent = makeExecutiveSummary(r);
   $("reportNameFooter").textContent = r.name;
   $("today").textContent = `تاريخ العرض: ${today()}`;
+  updateLogoUI(r);
   updateCharts(r);
 }
 
@@ -250,6 +300,12 @@ function init() {
   $("deleteReportBtn").onclick = deleteReport;
   $("resetCurrentBtn").onclick = resetCurrent;
   $("savePdfBtn").onclick = () => window.print();
+  $("uploadLogoBtn").onclick = () => $("logoUploadInput").click();
+  $("logoUploadInput").onchange = (event) => {
+    handleLogoUpload(event.target.files?.[0]);
+    event.target.value = "";
+  };
+  $("removeLogoBtn").onclick = () => setActiveReportLogo("");
 }
 
 document.addEventListener("DOMContentLoaded", init);
