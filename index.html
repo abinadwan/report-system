@@ -13,7 +13,7 @@
 </head>
 <body>
   <main class="app-layout">
-    <aside class="panel controls" aria-label="لوحة إدارة وإدخال التقارير">
+    <aside class="panel controls no-print" aria-label="لوحة إدارة وإدخال التقارير">
       <section class="panel-section">
         <h2>إدارة التقارير</h2>
         <div class="report-actions">
@@ -79,7 +79,7 @@
     </aside>
 
     <section class="preview-wrap">
-      <article class="report" id="report">
+      <article class="report report-preview" id="report">
         <header class="report-header">
           <img id="headerLogo" class="header-logo" alt="شعار التقرير" hidden />
           <div class="header-text">
@@ -95,8 +95,9 @@
             <span id="rUpdatedAt">آخر تحديث: —</span>
           </div>
 
-          <h3 class="section-title">الأرقام الرئيسية</h3>
-          <div class="kpi-grid">
+          <section class="kpi-section">
+            <h3 class="section-title">الأرقام الرئيسية</h3>
+            <div class="kpi-grid">
             <article class="kpi"><span>إجمالي مكالمات 2025</span><strong id="total2025">0</strong></article>
             <article class="kpi"><span>متوسط 2025 الشهري</span><strong id="avg2025">0</strong></article>
             <article class="kpi"><span>إجمالي Q1 2026</span><strong id="q12026">0</strong></article>
@@ -104,11 +105,14 @@
             <article class="kpi"><span>معدل الإجابة 2026</span><strong id="rate2026">0%</strong></article>
             <article class="kpi"><span>متوسط سرعة الرد</span><strong id="speed2026">0 ث</strong></article>
           </div>
+          </section>
 
-          <div class="charts-grid">
+          <section class="charts-section">
+            <div class="charts-grid">
             <section class="card chart-card"><h3 class="section-title">مكالمات 2025 شهريًا</h3><canvas id="callsChart"></canvas></section>
             <section class="card chart-card"><h3 class="section-title">توزيع Q1 2026</h3><canvas id="q1Chart"></canvas></section>
           </div>
+          </section>
 
           <section class="card summary-card">
             <h3 class="section-title">الملخص التنفيذي</h3>

@@ -286,6 +286,25 @@ function resetCurrent() {
   hydrateForm(); renderReportList(); updateReportPreview();
 }
 
+
+
+function resizeChartsForLayout() {
+  if (callsChart) callsChart.resize();
+  if (q1Chart) q1Chart.resize();
+}
+
+function beforePrintHandler() {
+  saveActiveReport("تم الحفظ تلقائيًا");
+  updateReportPreview();
+  document.body.classList.add("print-mode");
+  resizeChartsForLayout();
+}
+
+function afterPrintHandler() {
+  document.body.classList.remove("print-mode");
+  resizeChartsForLayout();
+}
+
 function init() {
   buildMonths2025();
   ensureInit();
@@ -299,7 +318,10 @@ function init() {
   $("duplicateReportBtn").onclick = duplicateReport;
   $("deleteReportBtn").onclick = deleteReport;
   $("resetCurrentBtn").onclick = resetCurrent;
-  $("savePdfBtn").onclick = () => window.print();
+  $("savePdfBtn").onclick = () => {
+    beforePrintHandler();
+    window.print();
+  };
   $("uploadLogoBtn").onclick = () => $("logoUploadInput").click();
   $("logoUploadInput").onchange = (event) => {
     handleLogoUpload(event.target.files?.[0]);
@@ -307,5 +329,8 @@ function init() {
   };
   $("removeLogoBtn").onclick = () => setActiveReportLogo("");
 }
+
+window.addEventListener("beforeprint", beforePrintHandler);
+window.addEventListener("afterprint", afterPrintHandler);
 
 document.addEventListener("DOMContentLoaded", init);
