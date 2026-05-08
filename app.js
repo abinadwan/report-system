@@ -1,150 +1,255 @@
-const STORAGE_KEY = "executive_report_v1";
+const REPORTS_KEY = "report_builder_lite_reports_v2";
+const ACTIVE_REPORT_KEY = "report_builder_lite_active_id_v2";
 const monthLabels = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-const q1Labels = ["يناير", "فبراير", "مارس"];
 let callsChart;
 let q1Chart;
-let logoState = { left: "", right: "" };
+let autosaveTimer;
 
-const clamp = (v, min = 0, max = Number.POSITIVE_INFINITY) => Math.min(max, Math.max(min, Number(v) || 0));
-const f = (n) => Number(n || 0).toLocaleString("ar-SA");
+const $ = (id) => document.getElementById(id);
+const n = (value, max = Number.POSITIVE_INFINITY) => Math.min(max, Math.max(0, Number(value) || 0));
+const f = (value) => Number(value || 0).toLocaleString("ar-SA");
+const today = () => new Date().toLocaleDateString("ar-SA");
 
-function buildMonthInputs() {
-  const wrap = document.getElementById("months2025");
+function createReport(seedName = "تقرير جديد") {
+  const now = new Date().toISOString();
+  return {
+    id: (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(16).slice(2)}`),
+    name: seedName,
+    createdAt: now,
+    updatedAt: now,
+    general: { title: "تقرير تنفيذي داخلي", subtitle: "ملخص أداء مركز الاتصال", establishedDate: "", scope: "" },
+    calls2025: new Array(12).fill(0),
+    q1_2026: { jan: 0, feb: 0, mar: 0 },
+    kpis: { answerRate2026: 0, averageResponseSpeed: 0 },
+    theme: "sdaia"
+  };
+}
+
+function getReports() {
+  const parsed = JSON.parse(localStorage.getItem(REPORTS_KEY) || "[]");
+  return Array.isArray(parsed) ? parsed : [];
+}
+function saveReports(reports) { localStorage.setItem(REPORTS_KEY, JSON.stringify(reports)); }
+function getActiveId() { return localStorage.getItem(ACTIVE_REPORT_KEY); }
+function setActiveId(id) { localStorage.setItem(ACTIVE_REPORT_KEY, id); }
+
+function ensureInit() {
+  let reports = getReports();
+  if (!reports.length) {
+    reports = [createReport("التقرير الافتراضي")];
+    saveReports(reports);
+    setActiveId(reports[0].id);
+  }
+  if (!reports.some((r) => r.id === getActiveId())) setActiveId(reports[0].id);
+}
+
+function activeReport() {
+  const reports = getReports();
+  return reports.find((r) => r.id === getActiveId()) || reports[0];
+}
+
+function buildMonths2025() {
+  const wrap = $("months2025");
   monthLabels.forEach((m, i) => {
     const div = document.createElement("div");
-    div.className = "month-input";
-    div.innerHTML = `<label for="m2025_${i}">${m} 2025</label><input id="m2025_${i}" type="number" min="0"/>`;
+    div.innerHTML = `<label for="m2025_${i}">${m} 2025</label><input id="m2025_${i}" type="number" min="0" />`;
     wrap.appendChild(div);
   });
 }
 
-function get2025() { return monthLabels.map((_, i) => clamp(document.getElementById(`m2025_${i}`).value)); }
-function getQ1() { return ["jan2026", "feb2026", "mar2026"].map((id) => clamp(document.getElementById(id).value)); }
-
-function setLogoImage(slot, src) {
-  const img = document.getElementById(slot === "left" ? "logoLeft" : "logoRight");
-  const fallback = img.nextElementSibling;
-  if (src) {
-    img.src = src;
-    img.hidden = false;
-    fallback.hidden = true;
-  } else {
-    img.removeAttribute("src");
-    img.hidden = true;
-    fallback.hidden = false;
-  }
-}
-
-function saveState() {
-  const data = {};
-  document.querySelectorAll("input:not([type='file'])").forEach((i) => data[i.id] = i.value);
-  data.logoState = logoState;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-function restoreState() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return;
-  const data = JSON.parse(raw);
-  Object.entries(data).forEach(([id, value]) => {
-    const el = document.getElementById(id);
-    if (el) el.value = value;
+function renderReportList() {
+  const wrap = $("reportList");
+  wrap.innerHTML = "";
+  const aid = getActiveId();
+  getReports().forEach((report) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = report.id === aid ? "active" : "";
+    btn.textContent = `${report.name} (${new Date(report.updatedAt).toLocaleDateString("ar-SA")})`;
+    btn.onclick = () => { setActiveId(report.id); hydrateForm(); renderReportList(); updateReportPreview(); };
+    wrap.appendChild(btn);
   });
-
-  logoState = data.logoState || { left: "", right: "" };
-  setLogoImage("left", logoState.left);
-  setLogoImage("right", logoState.right);
 }
 
-function handleLogoUpload(slot, file) {
-  if (!file) {
-    logoState[slot] = "";
-    setLogoImage(slot, "");
-    saveState();
-    return;
+function hydrateForm() {
+  const r = activeReport();
+  $("reportName").value = r.name;
+  $("title").value = r.general.title;
+  $("subtitle").value = r.general.subtitle;
+  $("establishedDate").value = r.general.establishedDate;
+  $("scope").value = r.general.scope;
+  $("themeSelect").value = r.theme;
+  r.calls2025.forEach((v, i) => { $(`m2025_${i}`).value = v || ""; });
+  $("q1Jan").value = r.q1_2026.jan || "";
+  $("q1Feb").value = r.q1_2026.feb || "";
+  $("q1Mar").value = r.q1_2026.mar || "";
+  $("answerRate2026").value = r.kpis.answerRate2026 || "";
+  $("averageResponseSpeed").value = r.kpis.averageResponseSpeed || "";
+}
+
+function readFormIntoReport(report) {
+  report.name = $("reportName").value.trim() || "تقرير بدون اسم";
+  report.general.title = $("title").value.trim() || "تقرير تنفيذي داخلي";
+  report.general.subtitle = $("subtitle").value.trim() || "ملخص أداء مركز الاتصال";
+  report.general.establishedDate = $("establishedDate").value;
+  report.general.scope = $("scope").value.trim();
+  report.theme = $("themeSelect").value;
+  report.calls2025 = monthLabels.map((_, i) => n($(`m2025_${i}`).value));
+  report.q1_2026.jan = n($("q1Jan").value);
+  report.q1_2026.feb = n($("q1Feb").value);
+  report.q1_2026.mar = n($("q1Mar").value);
+  report.kpis.answerRate2026 = n($("answerRate2026").value, 100);
+  report.kpis.averageResponseSpeed = n($("averageResponseSpeed").value);
+  report.updatedAt = new Date().toISOString();
+}
+
+function saveActiveReport(statusText = "تم الحفظ تلقائيًا") {
+  const reports = getReports();
+  const idx = reports.findIndex((r) => r.id === getActiveId());
+  if (idx < 0) return;
+  readFormIntoReport(reports[idx]);
+  saveReports(reports);
+  $("autosaveStatus").textContent = statusText;
+  renderReportList();
+}
+
+function scheduleAutosave() {
+  $("autosaveStatus").textContent = "جاري الحفظ...";
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    saveActiveReport("تم الحفظ تلقائيًا");
+    updateReportPreview();
+  }, 400);
+}
+
+function makeExecutiveSummary(data) {
+  const q1 = [data.q1_2026.jan, data.q1_2026.feb, data.q1_2026.mar];
+  const q1Total = q1.reduce((a, b) => a + b, 0);
+  const q1Avg = q1Total / 3;
+  const avg2025 = data.calls2025.reduce((a, b) => a + b, 0) / 12;
+  const diff = avg2025 ? ((q1Avg - avg2025) / avg2025) * 100 : 0;
+  const maxIdx = q1.indexOf(Math.max(...q1));
+  const trend = diff >= 0 ? `بارتفاع قدره ${diff.toFixed(1)}٪` : `بانخفاض قدره ${Math.abs(diff).toFixed(1)}٪`;
+  return `يعرض التقرير أن إجمالي مكالمات الربع الأول لعام 2026 بلغ ${f(q1Total)} مكالمة، بمتوسط شهري ${f(Math.round(q1Avg))} مكالمة. وبالمقارنة مع متوسط عام 2025 الشهري البالغ ${f(Math.round(avg2025))} مكالمة، يظهر الأداء ${trend}. وقد سجّل شهر ${monthLabels[maxIdx]} أعلى حجم ضمن الربع الأول. كما بلغ معدل الإجابة ${data.kpis.answerRate2026.toFixed(2)}٪، فيما وصل متوسط سرعة الرد إلى ${f(data.kpis.averageResponseSpeed)} ثانية.`;
+}
+
+function updateCharts(report) {
+  const calls = report.calls2025;
+  const q1 = [report.q1_2026.jan, report.q1_2026.feb, report.q1_2026.mar];
+  const styles = getComputedStyle(document.body);
+  const c1 = styles.getPropertyValue("--chart-1").trim();
+  const c2 = styles.getPropertyValue("--chart-2").trim();
+  const c3 = styles.getPropertyValue("--chart-3").trim();
+
+  if (!callsChart) {
+    callsChart = new Chart($("callsChart"), { type: "bar", data: { labels: monthLabels, datasets: [{ data: calls, backgroundColor: c1, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
+  } else {
+    callsChart.data.datasets[0].data = calls;
+    callsChart.data.datasets[0].backgroundColor = c1;
+    callsChart.update();
   }
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    logoState[slot] = String(reader.result || "");
-    setLogoImage(slot, logoState[slot]);
-    saveState();
-  };
-  reader.readAsDataURL(file);
-}
-
-function makeSummary({ total25, totalQ1, avg25, avgQ1, rate, speed, change }) {
-  const trend = change >= 0 ? `ارتفاعًا بنسبة ${change.toFixed(1)}٪` : `انخفاضًا بنسبة ${Math.abs(change).toFixed(1)}٪`;
-  return `يوضح هذا التقرير الأداء التشغيلي لمركز الاتصال، حيث بلغ إجمالي مكالمات عام 2025 عدد ${f(total25)} مكالمة بمتوسط شهري ${f(Math.round(avg25))} مكالمة. وخلال الربع الأول من عام 2026 تم تسجيل ${f(totalQ1)} مكالمة بمتوسط ${f(Math.round(avgQ1))} مكالمة شهريًا، ما يعكس ${trend} مقارنة بخط الأساس لعام 2025. كما بلغ معدل الإجابة ${rate.toFixed(2)}٪ بمتوسط سرعة رد قدره ${f(speed)} ثانية، وهو ما يدعم الاستمرار في تحسين كفاءة الخدمة وجودة الاستجابة.`;
-}
-
-function updateReport() {
-  const v25 = get2025();
-  const vQ1 = getQ1();
-  const total25 = v25.reduce((a, b) => a + b, 0);
-  const totalQ1 = vQ1.reduce((a, b) => a + b, 0);
-  const avg25 = total25 / 12;
-  const avgQ1 = totalQ1 / 3;
-  const change = avg25 ? ((avgQ1 - avg25) / avg25) * 100 : 0;
-  const rate = clamp(document.getElementById("answerRate").value, 0, 100);
-  const speed = clamp(document.getElementById("avgSpeed").value);
-
-  document.getElementById("rTitle").textContent = document.getElementById("title").value || "تقرير تنفيذي داخلي";
-  document.getElementById("rSubtitle").textContent = document.getElementById("subtitle").value || "ملخص أداء مركز الاتصال";
-  document.getElementById("total2025").textContent = f(total25);
-  document.getElementById("avg2025").textContent = f(Math.round(avg25));
-  document.getElementById("q12026").textContent = f(totalQ1);
-  document.getElementById("avgQ1").textContent = f(Math.round(avgQ1));
-  document.getElementById("rate2026").textContent = `${rate.toFixed(2)}%`;
-  document.getElementById("speed2026").textContent = `${f(speed)} ث`;
-  document.getElementById("growthNote").textContent = change >= 0 ? `نمو ${change.toFixed(1)}%` : `تراجع ${Math.abs(change).toFixed(1)}%`;
-  document.getElementById("execSummary").textContent = makeSummary({ total25, totalQ1, avg25, avgQ1, rate, speed, change });
-  document.getElementById("today").textContent = `تاريخ الإنشاء: ${new Date().toLocaleDateString("ar-SA")}`;
-
-  if (callsChart && q1Chart) {
-    callsChart.data.datasets[0].data = v25;
-    callsChart.update();
-    q1Chart.data.datasets[0].data = vQ1;
+  if (!q1Chart) {
+    q1Chart = new Chart($("q1Chart"), { type: "doughnut", data: { labels: monthLabels.slice(0, 3), datasets: [{ data: q1, backgroundColor: [c1, c2, c3] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } } });
+  } else {
+    q1Chart.data.datasets[0].data = q1;
+    q1Chart.data.datasets[0].backgroundColor = [c1, c2, c3];
     q1Chart.update();
   }
-
-  saveState();
 }
 
-function initCharts() {
-  if (typeof Chart === "undefined") return;
-  callsChart = new Chart(document.getElementById("callsChart"), {
-    type: "bar",
-    data: { labels: monthLabels, datasets: [{ data: get2025(), backgroundColor: "#2F6FED", borderRadius: 6 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { ticks: { maxRotation: 0, minRotation: 0 } } } }
-  });
+function updateReportPreview() {
+  const r = activeReport();
+  if (!r) return;
+  document.body.dataset.theme = r.theme;
+  const q1 = [r.q1_2026.jan, r.q1_2026.feb, r.q1_2026.mar];
+  const total25 = r.calls2025.reduce((a, b) => a + b, 0);
+  const avg25 = total25 / 12;
+  const totalQ1 = q1.reduce((a, b) => a + b, 0);
+  const avgQ1 = totalQ1 / 3;
 
-  q1Chart = new Chart(document.getElementById("q1Chart"), {
-    type: "doughnut",
-    data: { labels: q1Labels, datasets: [{ data: getQ1(), backgroundColor: ["#0F9D8A", "#5B3FD6", "#F2994A"] }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
-  });
+  $("rTitle").textContent = r.general.title;
+  $("rSubtitle").textContent = r.general.subtitle;
+  $("rScope").textContent = `نطاق التقرير: ${r.general.scope || "—"}`;
+  $("rEstablished").textContent = `تاريخ التأسيس: ${r.general.establishedDate || "—"}`;
+  $("rUpdatedAt").textContent = `آخر تحديث: ${new Date(r.updatedAt).toLocaleString("ar-SA")}`;
+  $("total2025").textContent = f(total25);
+  $("avg2025").textContent = f(Math.round(avg25));
+  $("q12026").textContent = f(totalQ1);
+  $("avgQ1").textContent = f(Math.round(avgQ1));
+  $("rate2026").textContent = `${r.kpis.answerRate2026.toFixed(2)}%`;
+  $("speed2026").textContent = `${f(r.kpis.averageResponseSpeed)} ث`;
+  $("execSummary").textContent = makeExecutiveSummary(r);
+  $("reportNameFooter").textContent = r.name;
+  $("today").textContent = `تاريخ العرض: ${today()}`;
+  updateCharts(r);
 }
 
-function resetData() {
-  document.querySelectorAll("input").forEach((i) => i.value = "");
-  logoState = { left: "", right: "" };
-  setLogoImage("left", "");
-  setLogoImage("right", "");
-  localStorage.removeItem(STORAGE_KEY);
-  updateReport();
+function newReport() {
+  const reports = getReports();
+  const report = createReport(`تقرير ${reports.length + 1}`);
+  reports.push(report);
+  saveReports(reports);
+  setActiveId(report.id);
+  hydrateForm();
+  renderReportList();
+  updateReportPreview();
+}
+
+function duplicateReport() {
+  const source = activeReport();
+  const copy = structuredClone ? structuredClone(source) : JSON.parse(JSON.stringify(source));
+  copy.id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  copy.name = `${source.name} (نسخة)`;
+  copy.createdAt = new Date().toISOString();
+  copy.updatedAt = copy.createdAt;
+  const reports = getReports();
+  reports.push(copy);
+  saveReports(reports);
+  setActiveId(copy.id);
+  hydrateForm(); renderReportList(); updateReportPreview();
+}
+
+function deleteReport() {
+  const reports = getReports();
+  if (reports.length === 1) {
+    alert("لا يمكن حذف آخر تقرير. يمكنك استخدام إعادة الضبط.");
+    return;
+  }
+  const current = activeReport();
+  if (!confirm(`هل تريد حذف التقرير: ${current.name}؟`)) return;
+  const filtered = reports.filter((r) => r.id !== current.id);
+  saveReports(filtered);
+  setActiveId(filtered[0].id);
+  hydrateForm(); renderReportList(); updateReportPreview();
+}
+
+function resetCurrent() {
+  if (!confirm("سيتم مسح بيانات التقرير الحالي وإعادته للوضع الافتراضي. متابعة؟")) return;
+  const reports = getReports();
+  const idx = reports.findIndex((r) => r.id === getActiveId());
+  const old = reports[idx];
+  reports[idx] = createReport(old.name);
+  reports[idx].id = old.id;
+  reports[idx].createdAt = old.createdAt;
+  saveReports(reports);
+  hydrateForm(); renderReportList(); updateReportPreview();
 }
 
 function init() {
-  buildMonthInputs();
-  restoreState();
-  initCharts();
-  document.querySelectorAll("input:not([type='file'])").forEach((el) => el.addEventListener("input", updateReport));
-  document.getElementById("logoLeftUpload").addEventListener("change", (e) => handleLogoUpload("left", e.target.files[0]));
-  document.getElementById("logoRightUpload").addEventListener("change", (e) => handleLogoUpload("right", e.target.files[0]));
-  document.getElementById("savePdfBtn").addEventListener("click", () => window.print());
-  document.getElementById("resetBtn").addEventListener("click", resetData);
-  updateReport();
+  buildMonths2025();
+  ensureInit();
+  hydrateForm();
+  renderReportList();
+  updateReportPreview();
+  const inputs = document.querySelectorAll("input, select");
+  inputs.forEach((el) => el.addEventListener("input", scheduleAutosave));
+  $("newReportBtn").onclick = newReport;
+  $("saveReportBtn").onclick = () => { saveActiveReport("تم الحفظ تلقائيًا"); updateReportPreview(); };
+  $("duplicateReportBtn").onclick = duplicateReport;
+  $("deleteReportBtn").onclick = deleteReport;
+  $("resetCurrentBtn").onclick = resetCurrent;
+  $("savePdfBtn").onclick = () => window.print();
 }
 
 document.addEventListener("DOMContentLoaded", init);

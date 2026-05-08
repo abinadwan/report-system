@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'" />
-  <title>تقرير تنفيذي داخلي</title>
+  <title>منشئ التقارير - المرحلة الثانية</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,20 +13,35 @@
 </head>
 <body>
   <main class="app-layout">
-    <aside class="panel" aria-label="لوحة إدخال البيانات">
-      <h2>لوحة إدخال البيانات</h2>
-
+    <aside class="panel controls" aria-label="لوحة إدارة وإدخال التقارير">
       <section class="panel-section">
-        <h3>المعلومات العامة للتقرير</h3>
-        <div class="field"><label for="title">العنوان الرئيسي</label><input id="title" type="text" /></div>
-        <div class="field"><label for="subtitle">العنوان الفرعي</label><input id="subtitle" type="text" /></div>
-        <div class="field"><label for="department">الإدارة / الجهة</label><input id="department" type="text" /></div>
+        <h2>إدارة التقارير</h2>
+        <div class="report-actions">
+          <button id="newReportBtn" type="button" class="secondary">تقرير جديد</button>
+          <button id="saveReportBtn" type="button" class="secondary">حفظ الآن</button>
+          <button id="duplicateReportBtn" type="button" class="secondary">نسخ التقرير</button>
+          <button id="deleteReportBtn" type="button" class="danger">حذف التقرير</button>
+        </div>
+        <label for="reportName">اسم التقرير</label>
+        <input id="reportName" type="text" placeholder="مثال: تقرير الأداء التنفيذي" />
+        <div id="autosaveStatus" class="status">تم الحفظ تلقائيًا</div>
+        <div id="reportList" class="report-list" role="listbox" aria-label="قائمة التقارير"></div>
+        <button id="resetCurrentBtn" type="button" class="secondary full">إعادة ضبط التقرير الحالي</button>
       </section>
 
       <section class="panel-section">
-        <h3>رفع الشعارات</h3>
-        <div class="field"><label for="logoLeftUpload">الشعار الأيمن في الترويسة</label><input id="logoLeftUpload" type="file" accept="image/*,.svg,.png" /></div>
-        <div class="field"><label for="logoRightUpload">الشعار الأيسر في الترويسة</label><input id="logoRightUpload" type="file" accept="image/*,.svg,.png" /></div>
+        <h3>إعدادات عامة</h3>
+        <div class="field"><label for="title">العنوان الرئيسي</label><input id="title" type="text" /></div>
+        <div class="field"><label for="subtitle">العنوان الفرعي</label><input id="subtitle" type="text" /></div>
+        <div class="field"><label for="establishedDate">تاريخ التأسيس</label><input id="establishedDate" type="date" /></div>
+        <div class="field"><label for="scope">نطاق التقرير</label><input id="scope" type="text" /></div>
+        <div class="field"><label for="themeSelect">السمة</label>
+          <select id="themeSelect">
+            <option value="sdaia">SDAIA</option>
+            <option value="light">Light</option>
+            <option value="dark-executive">Dark Executive</option>
+          </select>
+        </div>
       </section>
 
       <section class="panel-section">
@@ -37,42 +52,41 @@
       <section class="panel-section">
         <h3>مكالمات الربع الأول 2026</h3>
         <div class="month-grid q1-grid">
-          <div class="month-input"><label for="jan2026">يناير 2026</label><input id="jan2026" type="number" min="0" /></div>
-          <div class="month-input"><label for="feb2026">فبراير 2026</label><input id="feb2026" type="number" min="0" /></div>
-          <div class="month-input"><label for="mar2026">مارس 2026</label><input id="mar2026" type="number" min="0" /></div>
+          <div class="month-input"><label for="q1Jan">يناير 2026</label><input id="q1Jan" type="number" min="0" /></div>
+          <div class="month-input"><label for="q1Feb">فبراير 2026</label><input id="q1Feb" type="number" min="0" /></div>
+          <div class="month-input"><label for="q1Mar">مارس 2026</label><input id="q1Mar" type="number" min="0" /></div>
         </div>
       </section>
 
       <section class="panel-section">
-        <h3>مؤشرات الأداء الرئيسية (KPIs)</h3>
-        <div class="field"><label for="answerRate">معدل الإجابة 2026 (%)</label><input id="answerRate" type="number" min="0" max="100" step="0.01" /></div>
-        <div class="field"><label for="avgSpeed">متوسط سرعة الرد (ثانية)</label><input id="avgSpeed" type="number" min="0" step="0.01" /></div>
+        <h3>مؤشرات الأداء الرئيسية</h3>
+        <div class="field"><label for="answerRate2026">معدل الإجابة 2026 (%)</label><input id="answerRate2026" type="number" min="0" max="100" step="0.01" /></div>
+        <div class="field"><label for="averageResponseSpeed">متوسط سرعة الرد (ثانية)</label><input id="averageResponseSpeed" type="number" min="0" step="0.01" /></div>
       </section>
 
       <div class="btn-row">
         <button class="primary" id="savePdfBtn" type="button">تصدير PDF</button>
-        <button class="secondary" id="resetBtn" type="button">إعادة الضبط</button>
       </div>
     </aside>
 
     <section class="preview-wrap">
       <article class="report" id="report">
         <header class="report-header">
-          <div class="logo-slot">
-            <img id="logoLeft" alt="شعار مرفوع" hidden>
-            <span class="fallback-logo">ارفع شعارًا</span>
-          </div>
+          <img class="header-logo" src="assets/sdaia-logo.png" alt="SDAIA Logo" />
           <div class="header-text">
             <h1 id="rTitle">تقرير تنفيذي داخلي</h1>
             <p id="rSubtitle">ملخص أداء مركز الاتصال</p>
+            <small id="rScope">نطاق التقرير: —</small>
           </div>
-          <div class="logo-slot">
-            <img id="logoRight" alt="شعار مرفوع" hidden>
-            <span class="fallback-logo">ارفع شعارًا</span>
-          </div>
+          <img class="header-logo" src="assets/ai-year-logo.png" alt="AI Year Logo" />
         </header>
 
         <section class="report-body">
+          <div class="meta-row">
+            <span id="rEstablished">تاريخ التأسيس: —</span>
+            <span id="rUpdatedAt">آخر تحديث: —</span>
+          </div>
+
           <h3 class="section-title">الأرقام الرئيسية</h3>
           <div class="kpi-grid">
             <article class="kpi"><span>إجمالي مكالمات 2025</span><strong id="total2025">0</strong></article>
@@ -81,7 +95,6 @@
             <article class="kpi"><span>متوسط Q1 الشهري</span><strong id="avgQ1">0</strong></article>
             <article class="kpi"><span>معدل الإجابة 2026</span><strong id="rate2026">0%</strong></article>
             <article class="kpi"><span>متوسط سرعة الرد</span><strong id="speed2026">0 ث</strong></article>
-            <article class="kpi wide"><span>النمو / التراجع مقابل متوسط 2025</span><strong id="growthNote">—</strong></article>
           </div>
 
           <div class="charts-grid">
@@ -97,8 +110,8 @@
 
         <footer class="report-footer">
           <span>تقرير داخلي للاستخدام التنفيذي فقط</span>
+          <span id="reportNameFooter">—</span>
           <span id="today"></span>
-          <span>Executive Reporting Tool</span>
         </footer>
       </article>
     </section>
