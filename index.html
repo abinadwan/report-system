@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'" />
-  <title>منشئ التقارير - المرحلة الثانية</title>
+  <title>Internal Executive Reporting System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -17,16 +17,17 @@
       <section class="panel-section">
         <h2>إدارة التقارير</h2>
         <div class="report-actions">
-          <button id="newReportBtn" type="button" class="secondary">تقرير جديد</button>
-          <button id="saveReportBtn" type="button" class="secondary">حفظ الآن</button>
-          <button id="duplicateReportBtn" type="button" class="secondary">نسخ التقرير</button>
-          <button id="deleteReportBtn" type="button" class="danger">حذف التقرير</button>
+          <button id="newReportBtn" type="button" class="secondary" aria-label="إنشاء تقرير جديد">تقرير جديد</button>
+          <button id="saveReportBtn" type="button" class="secondary" aria-label="حفظ التقرير الحالي">حفظ الآن</button>
+          <button id="duplicateReportBtn" type="button" class="secondary" aria-label="إنشاء نسخة من التقرير الحالي">نسخ التقرير</button>
+          <button id="deleteReportBtn" type="button" class="danger" aria-label="حذف التقرير الحالي">حذف التقرير</button>
         </div>
+        <button id="loadDemoBtn" type="button" class="secondary full" aria-label="تحميل بيانات تجريبية للتقرير الحالي">تحميل بيانات تجريبية</button>
         <label for="reportName">اسم التقرير</label>
-        <input id="reportName" type="text" placeholder="مثال: تقرير الأداء التنفيذي" />
-        <div id="autosaveStatus" class="status">تم الحفظ تلقائيًا</div>
+        <input id="reportName" type="text" placeholder="مثال: تقرير الأداء التنفيذي" aria-label="اسم التقرير" />
+        <div id="autosaveStatus" class="status" aria-live="polite">تم الحفظ تلقائيًا</div>
         <div id="reportList" class="report-list" role="listbox" aria-label="قائمة التقارير"></div>
-        <button id="resetCurrentBtn" type="button" class="secondary full">إعادة ضبط التقرير الحالي</button>
+        <button id="resetCurrentBtn" type="button" class="secondary full" aria-label="إعادة ضبط التقرير الحالي">إعادة ضبط التقرير الحالي</button>
       </section>
 
       <section class="panel-section">
@@ -36,7 +37,7 @@
         <div class="field"><label for="establishedDate">تاريخ التأسيس</label><input id="establishedDate" type="date" /></div>
         <div class="field"><label for="scope">نطاق التقرير</label><input id="scope" type="text" /></div>
         <div class="field"><label for="themeSelect">السمة</label>
-          <select id="themeSelect">
+          <select id="themeSelect" aria-label="اختيار سمة العرض">
             <option value="sdaia">SDAIA</option>
             <option value="light">Light</option>
             <option value="dark-executive">Dark Executive</option>
@@ -46,8 +47,8 @@
           <label for="logoUploadInput">شعار التقرير</label>
           <input id="logoUploadInput" type="file" accept=".png,.jpg,.jpeg,.svg,.webp,image/png,image/jpeg,image/svg+xml,image/webp" hidden />
           <div class="logo-controls">
-            <button id="uploadLogoBtn" type="button" class="secondary">رفع شعار</button>
-            <button id="removeLogoBtn" type="button" class="danger">إزالة الشعار</button>
+            <button id="uploadLogoBtn" type="button" class="secondary" aria-label="رفع شعار مخصص">رفع شعار</button>
+            <button id="removeLogoBtn" type="button" class="danger" aria-label="إزالة الشعار المرفوع">إزالة الشعار</button>
           </div>
           <small id="logoStatus" class="status">لا يوجد شعار مرفوع لهذا التقرير</small>
         </div>
@@ -74,13 +75,14 @@
       </section>
 
       <div class="btn-row">
-        <button class="primary" id="savePdfBtn" type="button">تصدير PDF</button>
+        <button class="primary" id="savePdfBtn" type="button" aria-label="تصدير التقرير بصيغة PDF">تصدير PDF</button>
+        <p class="print-hint">لأفضل نتيجة: اختر Margins: None وألغِ Headers and footers من نافذة الطباعة.</p>
       </div>
     </aside>
 
     <section class="preview-wrap">
       <article class="report report-preview" id="report">
-        <header class="report-header">
+        <header class="report-header no-logo">
           <img id="headerLogo" class="header-logo" alt="شعار التقرير" hidden />
           <div class="header-text">
             <h1 id="rTitle">تقرير تنفيذي داخلي</h1>
@@ -98,25 +100,25 @@
           <section class="kpi-section">
             <h3 class="section-title">الأرقام الرئيسية</h3>
             <div class="kpi-grid">
-            <article class="kpi"><span>إجمالي مكالمات 2025</span><strong id="total2025">0</strong></article>
-            <article class="kpi"><span>متوسط 2025 الشهري</span><strong id="avg2025">0</strong></article>
-            <article class="kpi"><span>إجمالي Q1 2026</span><strong id="q12026">0</strong></article>
-            <article class="kpi"><span>متوسط Q1 الشهري</span><strong id="avgQ1">0</strong></article>
-            <article class="kpi"><span>معدل الإجابة 2026</span><strong id="rate2026">0%</strong></article>
-            <article class="kpi"><span>متوسط سرعة الرد</span><strong id="speed2026">0 ث</strong></article>
-          </div>
+              <article class="kpi"><span>إجمالي مكالمات 2025</span><strong id="total2025">—</strong></article>
+              <article class="kpi"><span>متوسط 2025 الشهري</span><strong id="avg2025">—</strong></article>
+              <article class="kpi"><span>إجمالي Q1 2026</span><strong id="q12026">—</strong></article>
+              <article class="kpi"><span>متوسط Q1 الشهري</span><strong id="avgQ1">—</strong></article>
+              <article class="kpi"><span>معدل الإجابة 2026</span><strong id="rate2026">—</strong></article>
+              <article class="kpi"><span>متوسط سرعة الرد</span><strong id="speed2026">—</strong></article>
+            </div>
           </section>
 
           <section class="charts-section">
             <div class="charts-grid">
-            <section class="card chart-card"><h3 class="section-title">مكالمات 2025 شهريًا</h3><canvas id="callsChart"></canvas></section>
-            <section class="card chart-card"><h3 class="section-title">توزيع Q1 2026</h3><canvas id="q1Chart"></canvas></section>
-          </div>
+              <section class="card chart-card"><h3 class="section-title">مكالمات 2025 شهريًا</h3><canvas id="callsChart"></canvas></section>
+              <section class="card chart-card"><h3 class="section-title">توزيع Q1 2026</h3><canvas id="q1Chart"></canvas></section>
+            </div>
           </section>
 
           <section class="card summary-card">
             <h3 class="section-title">الملخص التنفيذي</h3>
-            <p id="execSummary"></p>
+            <p id="execSummary">—</p>
           </section>
         </section>
 
