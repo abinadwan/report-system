@@ -11,6 +11,16 @@ const f = (value) => Number(value || 0).toLocaleString("ar-SA");
 const today = () => new Date().toLocaleDateString("ar-SA");
 
 const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/svg+xml", "image/webp"]);
+const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
+
+function safeJsonParse(raw, fallback) {
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 function updateLogoUI(report) {
   const hasLogo = Boolean(report.logoDataUrl);
@@ -43,6 +53,11 @@ function setActiveReportLogo(logoDataUrl) {
 
 function handleLogoUpload(file) {
   if (!file) return;
+  if (file.size > MAX_LOGO_SIZE_BYTES) {
+    alert("حجم الشعار كبير جدًا. الحد الأقصى هو 2 ميجابايت.");
+    return;
+  }
+
   const fileType = file.type.toLowerCase();
   const fileExt = file.name.split(".").pop()?.toLowerCase();
   const validExt = ["png", "jpg", "jpeg", "svg", "webp"].includes(fileExt || "");
@@ -50,13 +65,16 @@ function handleLogoUpload(file) {
     alert("صيغة الشعار غير مدعومة. يرجى استخدام PNG أو JPG أو SVG أو WEBP.");
     return;
   }
+
   const reader = new FileReader();
   reader.onload = () => {
     if (typeof reader.result === "string") setActiveReportLogo(reader.result);
   };
+  reader.onerror = () => {
+    alert("تعذر قراءة ملف الشعار. حاول مرة أخرى.");
+  };
   reader.readAsDataURL(file);
 }
-
 
 function createReport(seedName = "تقرير جديد") {
   const now = new Date().toISOString();
@@ -75,7 +93,7 @@ function createReport(seedName = "تقرير جديد") {
 }
 
 function getReports() {
-  const parsed = JSON.parse(localStorage.getItem(REPORTS_KEY) || "[]");
+  const parsed = safeJsonParse(localStorage.getItem(REPORTS_KEY) || "[]", []);
   return Array.isArray(parsed) ? parsed : [];
 }
 function saveReports(reports) { localStorage.setItem(REPORTS_KEY, JSON.stringify(reports)); }
@@ -101,6 +119,7 @@ function buildMonths2025() {
   const wrap = $("months2025");
   monthLabels.forEach((m, i) => {
     const div = document.createElement("div");
+    div.className = "month-input";
     div.innerHTML = `<label for="m2025_${i}">${m} 2025</label><input id="m2025_${i}" type="number" min="0" />`;
     wrap.appendChild(div);
   });
@@ -182,7 +201,13 @@ function makeExecutiveSummary(data) {
   return `يعرض التقرير أن إجمالي مكالمات الربع الأول لعام 2026 بلغ ${f(q1Total)} مكالمة، بمتوسط شهري ${f(Math.round(q1Avg))} مكالمة. وبالمقارنة مع متوسط عام 2025 الشهري البالغ ${f(Math.round(avg2025))} مكالمة، يظهر الأداء ${trend}. وقد سجّل شهر ${monthLabels[maxIdx]} أعلى حجم ضمن الربع الأول. كما بلغ معدل الإجابة ${data.kpis.answerRate2026.toFixed(2)}٪، فيما وصل متوسط سرعة الرد إلى ${f(data.kpis.averageResponseSpeed)} ثانية.`;
 }
 
+function canRenderCharts() {
+  return typeof window.Chart === "function";
+}
+
 function updateCharts(report) {
+  if (!canRenderCharts()) return;
+
   const calls = report.calls2025;
   const q1 = [report.q1_2026.jan, report.q1_2026.feb, report.q1_2026.mar];
   const styles = getComputedStyle(document.body);
@@ -248,7 +273,8 @@ function newReport() {
 
 function duplicateReport() {
   const source = activeReport();
-  const copy = structuredClone ? structuredClone(source) : JSON.parse(JSON.stringify(source));
+  const canUseStructuredClone = typeof structuredClone === "function";
+  const copy = canUseStructuredClone ? structuredClone(source) : JSON.parse(JSON.stringify(source));
   copy.id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(16).slice(2)}`;
   copy.name = `${source.name} (نسخة)`;
   copy.createdAt = new Date().toISOString();
@@ -286,8 +312,6 @@ function resetCurrent() {
   hydrateForm(); renderReportList(); updateReportPreview();
 }
 
-
-
 function resizeChartsForLayout() {
   if (callsChart) callsChart.resize();
   if (q1Chart) q1Chart.resize();
@@ -311,6 +335,11 @@ function init() {
   hydrateForm();
   renderReportList();
   updateReportPreview();
+
+  if (!canRenderCharts()) {
+    $("autosaveStatus").textContent = "تنبيه: تعذر تحميل مكتبة الرسوم البيانية، سيتم عرض التقرير بدون مخططات.";
+  }
+
   const inputs = document.querySelectorAll("input, select");
   inputs.forEach((el) => el.addEventListener("input", scheduleAutosave));
   $("newReportBtn").onclick = newReport;
