@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تقرير أداء مركز الاتصال</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --primary: #1f4e79;
+      --secondary: #2f6fa6;
+      --text: #1d2733;
+      --muted: #6c7a89;
+      --warning: #f9c74f;
+      --danger: #e76f51;
+      --ok: #2a9d8f;
+      --border: #dce3ec;
+      --shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Tahoma", "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 24px auto; padding: 0 16px 32px; }
+    .header, .panel, .section { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .header { padding: 18px 24px; margin-bottom: 18px; }
+    h1 { margin: 0 0 8px; color: var(--primary); font-size: clamp(1.3rem, 2vw, 2rem); }
+    .meta { color: var(--muted); font-size: 0.95rem; }
+    .panel { padding: 16px; margin-bottom: 18px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .btn {
+      border: 0; border-radius: 10px; padding: 10px 16px; cursor: pointer; font-weight: 600;
+      background: var(--primary); color: #fff;
+    }
+    .btn:hover { background: var(--secondary); }
+    .btn.secondary { background: #3c4f65; }
+    .hint { color: var(--muted); font-size: .9rem; }
+    input[type="file"] { border: 1px dashed var(--border); padding: 8px; border-radius: 8px; background: #fff; }
+    .status { margin-top: 10px; font-weight: 600; }
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--ok); }
+    .section { padding: 16px; margin-bottom: 18px; }
+    .section h2 { margin: 0 0 12px; font-size: 1.2rem; color: var(--primary); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .kpi-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: linear-gradient(180deg, #fff, #f9fbff); }
+    .kpi-title { font-size: .88rem; color: var(--muted); margin-bottom: 6px; }
+    .kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+    .summary-box { background: #f7fbff; border: 1px solid #d8e7f6; border-radius: 10px; padding: 12px; }
+    .charts { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .chart-wrap { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 980px; font-size: .92rem; }
+    th, td { border: 1px solid var(--border); padding: 8px; text-align: center; }
+    th { background: #eef4fb; color: var(--primary); position: sticky; top: 0; z-index: 1; }
+    tr:nth-child(even) { background: #fbfdff; }
+    .flag-low { background: rgba(231,111,81,.18); font-weight: 600; }
+    .flag-mid { background: rgba(249,199,79,.25); font-weight: 600; }
+    .hidden { display: none; }
+
+    @media (max-width: 720px) {
+      .container { margin-top: 12px; }
+      .header, .panel, .section { border-radius: 10px; }
+      .controls { flex-direction: column; align-items: stretch; }
+      .btn { width: 100%; }
+      input[type=file] { width: 100%; }
+    }
+
+    @media print {
+      @page { size: A4; margin: 10mm; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .header, .panel, .section { box-shadow: none; border: 1px solid #bbb; margin-bottom: 10px; break-inside: avoid; }
+      .no-print { display: none !important; }
+      .charts { grid-template-columns: 1fr; }
+      table { font-size: 10px; }
+      th { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="reportRoot">
+    <div class="header">
+      <h1>تقرير أداء مركز الاتصال</h1>
+      <div class="meta">تاريخ توليد التقرير: <span id="generatedDate"></span></div>
+    </div>
+
+    <div class="panel no-print">
+      <div class="controls">
+        <input type="file" id="csvFileInput" accept=".csv,text/csv" />
+        <button class="btn" id="loadBtn">تحميل البيانات</button>
+        <button class="btn secondary" id="printBtn">تصدير PDF</button>
+      </div>
+      <div class="hint">ارفع ملف CSV لعرض التقرير.</div>
+      <div id="status" class="status"></div>
+    </div>
+
+    <div id="reportContent" class="hidden">
+      <section class="section">
+        <h2>الملخص التنفيذي</h2>
+        <div id="executiveSummary" class="summary-box"></div>
+      </section>
+
+      <section class="section">
+        <h2>مؤشرات الأداء الرئيسية (KPI)</h2>
+        <div class="kpi-grid" id="kpiGrid"></div>
+      </section>
+
+      <section class="section">
+        <h2>الرسوم البيانية</h2>
+        <div class="charts">
+          <div class="chart-wrap"><canvas id="callsChart"></canvas></div>
+          <div class="chart-wrap"><canvas id="answerRateChart"></canvas></div>
+          <div class="chart-wrap"><canvas id="comparisonChart"></canvas></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>جدول البيانات</h2>
+        <div class="table-wrap">
+          <table>
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const REQUIRED_COLUMNS = [
+      "Date","Calls","AnsweredCalls","MissedCalls","AnswerRate","AverageSpeed",
+      "AverageHandleTime","ServiceLevel","AbandonedCalls","AbandonRate","Notes"
+    ];
+
+    const state = { rawRows: [], normalizedRows: [], charts: [] };
+
+    function formatDateTimeNow() {
+      return new Date().toLocaleString('ar-SA', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let current = '', inQuotes = false, row = [];
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i], next = text[i + 1];
+        if (ch === '"') {
+          if (inQuotes && next === '"') { current += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if (ch === ',' && !inQuotes) {
+          row.push(current.trim()); current = '';
+        } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+          if (ch === '\r' && next === '\n') i++;
+          row.push(current.trim()); current = '';
+          if (row.some(v => v !== '')) rows.push(row);
+          row = [];
+        } else current += ch;
+      }
+      if (current.length || row.length) { row.push(current.trim()); if (row.some(v => v !== '')) rows.push(row); }
+      return rows;
+    }
+
+    function normalizePercent(value) {
+      if (value == null || value === '') return null;
+      const n = Number(String(value).replace('%', '').trim());
+      if (Number.isNaN(n)) return null;
+      return n;
+    }
+
+    function normalizeNumber(value) {
+      if (value == null || value === '') return null;
+      const cleaned = String(value).replace(/,/g, '').trim();
+      const n = Number(cleaned);
+      return Number.isNaN(n) ? null : n;
+    }
+
+    function toDisplayPercent(n) { return n == null ? '—' : `${n.toFixed(1)}%`; }
+    function toDisplayNumber(n) { return n == null ? '—' : n.toLocaleString('en-US'); }
+
+    function normalizeRow(rowObj) {
+      return {
+        Date: rowObj.Date || '',
+        Calls: normalizeNumber(rowObj.Calls),
+        AnsweredCalls: normalizeNumber(rowObj.AnsweredCalls),
+        MissedCalls: normalizeNumber(rowObj.MissedCalls),
+        AnswerRate: normalizePercent(rowObj.AnswerRate),
+        AverageSpeed: normalizeNumber(rowObj.AverageSpeed),
+        AverageHandleTime: normalizeNumber(rowObj.AverageHandleTime),
+        ServiceLevel: normalizePercent(rowObj.ServiceLevel),
+        AbandonedCalls: normalizeNumber(rowObj.AbandonedCalls),
+        AbandonRate: normalizePercent(rowObj.AbandonRate),
+        Notes: rowObj.Notes || ''
+      };
+    }
+
+    function setStatus(message, type='ok') {
+      const el = document.getElementById('status');
+      el.textContent = message;
+      el.className = `status ${type}`;
+    }
+
+    function mean(values) {
+      const valid = values.filter(v => typeof v === 'number' && !Number.isNaN(v));
+      if (!valid.length) return null;
+      return valid.reduce((a,b)=>a+b,0) / valid.length;
+    }
+
+    function buildExecutiveSummary(rows) {
+      const days = rows.length;
+      const bestCalls = [...rows].filter(r=>r.Calls!=null).sort((a,b)=>b.Calls-a.Calls)[0];
+      const avgAnswerRate = mean(rows.map(r=>r.AnswerRate));
+      const avgService = mean(rows.map(r=>r.ServiceLevel));
+      const avgAbandon = mean(rows.map(r=>r.AbandonRate));
+
+      const issues = [];
+      if (avgAnswerRate != null && avgAnswerRate < 90) issues.push('انخفاض متوسط معدل الإجابة عن المستوى المستهدف (90%).');
+      if (avgService != null && avgService < 80) issues.push('مستوى الخدمة أقل من الهدف التشغيلي (80%).');
+      if (avgAbandon != null && avgAbandon > 5) issues.push('ارتفاع معدل ترك المكالمات فوق الحد المقبول (5%).');
+
+      return `يغطي هذا التقرير عدد ${days} يوم/أيام تشغيلية مسجلة. ` +
+        (bestCalls ? `سجّل يوم ${bestCalls.Date} أعلى حجم مكالمات بإجمالي ${toDisplayNumber(bestCalls.Calls)} مكالمة. ` : '') +
+        `بلغ متوسط معدل الإجابة ${toDisplayPercent(avgAnswerRate)}، ومتوسط مستوى الخدمة ${toDisplayPercent(avgService)}، فيما بلغ متوسط معدل الترك ${toDisplayPercent(avgAbandon)}. ` +
+        (issues.length ? `أبرز الملاحظات: ${issues.join(' ')}` : 'لا توجد مؤشرات حرجة بارزة ضمن الحدود المعتمدة.');
+    }
+
+    function renderKPI(rows) {
+      const items = [
+        ['إجمالي المكالمات Total Calls', toDisplayNumber(rows.reduce((s,r)=>s+(r.Calls||0),0))],
+        ['إجمالي المكالمات المجابة Answered Calls', toDisplayNumber(rows.reduce((s,r)=>s+(r.AnsweredCalls||0),0))],
+        ['إجمالي المكالمات الفائتة Missed Calls', toDisplayNumber(rows.reduce((s,r)=>s+(r.MissedCalls||0),0))],
+        ['متوسط معدل الإجابة Average Answer Rate', toDisplayPercent(mean(rows.map(r=>r.AnswerRate)))],
+        ['متوسط سرعة الرد Average Speed of Answer', rows.length ? `${(mean(rows.map(r=>r.AverageSpeed))||0).toFixed(2)} ثانية` : '—'],
+        ['متوسط مدة المكالمة Average Handle Time', rows.length ? `${(mean(rows.map(r=>r.AverageHandleTime))||0).toFixed(2)} ثانية` : '—'],
+        ['متوسط مستوى الخدمة Average Service Level', toDisplayPercent(mean(rows.map(r=>r.ServiceLevel)))],
+        ['إجمالي المكالمات المتروكة Abandoned Calls', toDisplayNumber(rows.reduce((s,r)=>s+(r.AbandonedCalls||0),0))],
+        ['متوسط معدل الترك Average Abandon Rate', toDisplayPercent(mean(rows.map(r=>r.AbandonRate)))]
+      ];
+
+      const grid = document.getElementById('kpiGrid');
+      grid.innerHTML = items.map(([title, val]) =>
+        `<div class="kpi-card"><div class="kpi-title">${title}</div><div class="kpi-value">${val}</div></div>`).join('');
+    }
+
+    function destroyCharts() { state.charts.forEach(c => c.destroy()); state.charts = []; }
+
+    function renderCharts(rows) {
+      destroyCharts();
+      const labels = rows.map(r => r.Date);
+      state.charts.push(new Chart(document.getElementById('callsChart'), {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'عدد المكالمات', data: rows.map(r => r.Calls), backgroundColor: '#2f6fa6' }] },
+        options: { responsive: true, plugins: { legend: { display: true } } }
+      }));
+      state.charts.push(new Chart(document.getElementById('answerRateChart'), {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'معدل الإجابة %', data: rows.map(r => r.AnswerRate), borderColor: '#2a9d8f', backgroundColor:'rgba(42,157,143,.2)', tension:.25 }] },
+        options: { responsive: true, scales: { y: { suggestedMin: 0, suggestedMax: 100 } } }
+      }));
+      state.charts.push(new Chart(document.getElementById('comparisonChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'مجاب', data: rows.map(r => r.AnsweredCalls), backgroundColor: '#1f4e79' },
+            { label: 'فائت', data: rows.map(r => r.MissedCalls), backgroundColor: '#e76f51' },
+            { label: 'متروك', data: rows.map(r => r.AbandonedCalls), backgroundColor: '#f9c74f' }
+          ]
+        },
+        options: { responsive: true }
+      }));
+    }
+
+    function renderTable(rows) {
+      const head = document.getElementById('tableHead');
+      const body = document.getElementById('tableBody');
+      head.innerHTML = `<tr>${REQUIRED_COLUMNS.map(c => `<th>${c}</th>`).join('')}</tr>`;
+      body.innerHTML = rows.map(r => {
+        const cells = REQUIRED_COLUMNS.map(col => {
+          let val = r[col] ?? '';
+          if (["AnswerRate","ServiceLevel","AbandonRate"].includes(col)) val = toDisplayPercent(val);
+          else if (["Calls","AnsweredCalls","MissedCalls","AverageSpeed","AverageHandleTime","AbandonedCalls"].includes(col)) val = toDisplayNumber(val);
+          const cls = (col === 'AnswerRate' && r.AnswerRate != null && r.AnswerRate < 90) ||
+                      (col === 'ServiceLevel' && r.ServiceLevel != null && r.ServiceLevel < 80) ||
+                      (col === 'AbandonRate' && r.AbandonRate != null && r.AbandonRate > 5)
+                      ? 'flag-low' : '';
+          return `<td class="${cls}">${val}</td>`;
+        }).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+    }
+
+    function mapRowsByHeaders(parsedRows) {
+      const headers = parsedRows[0].map(h => h.trim());
+      const missing = REQUIRED_COLUMNS.filter(c => !headers.includes(c));
+      if (missing.length) throw new Error(`الأعمدة التالية مفقودة: ${missing.join('، ')}`);
+      return parsedRows.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((h, idx) => obj[h] = row[idx] ?? '');
+        return obj;
+      });
+    }
+
+    function handleCSVText(text) {
+      if (!text.trim()) throw new Error('الملف فارغ.');
+      const parsed = parseCSV(text);
+      if (parsed.length < 2) throw new Error('الملف لا يحتوي على بيانات كافية (صف عناوين + صف بيانات على الأقل).');
+      const rowObjects = mapRowsByHeaders(parsed);
+      const normalized = rowObjects.map(normalizeRow);
+      if (!normalized.length) throw new Error('لا توجد صفوف صالحة للعرض.');
+      state.rawRows = rowObjects;
+      state.normalizedRows = normalized;
+      renderReport(normalized);
+      setStatus(`تم تحميل ${normalized.length} صف بنجاح.`, 'ok');
+    }
+
+    function renderReport(rows) {
+      document.getElementById('reportContent').classList.remove('hidden');
+      document.getElementById('executiveSummary').textContent = buildExecutiveSummary(rows);
+      renderKPI(rows);
+      renderCharts(rows);
+      renderTable(rows);
+    }
+
+    function init() {
+      document.getElementById('generatedDate').textContent = formatDateTimeNow();
+      document.getElementById('loadBtn').addEventListener('click', () => {
+        const fileInput = document.getElementById('csvFileInput');
+        const file = fileInput.files?.[0];
+        if (!file) return setStatus('يرجى اختيار ملف CSV أولًا.', 'error');
+        if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
+          return setStatus('نوع الملف غير مدعوم. يرجى رفع ملف CSV فقط.', 'error');
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          try { handleCSVText(reader.result); } catch (e) { setStatus(e.message, 'error'); }
+        };
+        reader.onerror = () => setStatus('حدث خطأ أثناء قراءة الملف.', 'error');
+        reader.readAsText(file, 'UTF-8');
+      });
+
+      document.getElementById('printBtn').addEventListener('click', () => {
+        if (!state.normalizedRows.length) {
+          setStatus('يرجى تحميل البيانات أولًا قبل التصدير.', 'error');
+          return;
+        }
+        window.print();
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
