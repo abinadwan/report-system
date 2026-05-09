@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>تقرير أداء مركز الاتصال</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
       --bg: #f5f7fb;
@@ -22,7 +26,9 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Tahoma", "Segoe UI", Arial, sans-serif;
+      direction: rtl;
+      text-align: right;
+      font-family: "Tajawal", Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
@@ -45,23 +51,59 @@
     .status { margin-top: 10px; font-weight: 600; }
     .status.error { color: var(--danger); }
     .status.ok { color: var(--ok); }
-    .section { padding: 16px; margin-bottom: 18px; }
+    .section { padding: 14px; margin-bottom: 14px; }
     .section h2 { margin: 0 0 12px; font-size: 1.2rem; color: var(--primary); }
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
     .kpi-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: linear-gradient(180deg, #fff, #f9fbff); }
     .kpi-title { font-size: .88rem; color: var(--muted); margin-bottom: 6px; }
     .kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
     .summary-box { background: #f7fbff; border: 1px solid #d8e7f6; border-radius: 10px; padding: 12px; }
-    .charts { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .charts { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
     .chart-wrap { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; min-width: 980px; font-size: .92rem; }
+    .chart-wrap canvas { width: 100% !important; height: 220px !important; }
+    .table-wrap { overflow-x: visible; width: 100%; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; table-layout: fixed; }
     th, td { border: 1px solid var(--border); padding: 8px; text-align: center; }
+    td { word-break: break-word; }
     th { background: #eef4fb; color: var(--primary); position: sticky; top: 0; z-index: 1; }
     tr:nth-child(even) { background: #fbfdff; }
     .flag-low { background: rgba(231,111,81,.18); font-weight: 600; }
     .flag-mid { background: rgba(249,199,79,.25); font-weight: 600; }
     .hidden { display: none; }
+    .data-table-wrapper,
+    .kpi-card,
+    .chart-card,
+    .summary-card,
+    table,
+    tr,
+    canvas {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .charts-section { page-break-before: auto; }
+    #reportContent { max-width: 190mm; margin: 0 auto; }
+    .exporting-pdf .controls,
+    .exporting-pdf .upload-section,
+    .exporting-pdf .no-print {
+      display: none !important;
+    }
+    .exporting-pdf #reportContent {
+      width: 190mm;
+      max-width: 190mm;
+      background: #fff;
+      box-shadow: none;
+    }
+    .exporting-pdf .kpi-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .exporting-pdf .section,
+    .exporting-pdf .summary-box,
+    .exporting-pdf .kpi-card,
+    .exporting-pdf .chart-wrap {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .exporting-pdf table { font-size: 9px; }
 
     @media (max-width: 720px) {
       .container { margin-top: 12px; }
@@ -78,7 +120,7 @@
       .header, .panel, .section { box-shadow: none; border: 1px solid #bbb; margin-bottom: 10px; break-inside: avoid; }
       .no-print { display: none !important; }
       .charts { grid-template-columns: 1fr; }
-      table { font-size: 10px; }
+      table { font-size: 10px; table-layout: fixed; }
       th { position: static; }
     }
   </style>
@@ -101,7 +143,7 @@
     </div>
 
     <div id="reportContent" class="hidden">
-      <section class="section">
+      <section class="section summary-card">
         <h2>الملخص التنفيذي</h2>
         <div id="executiveSummary" class="summary-box"></div>
       </section>
@@ -111,18 +153,18 @@
         <div class="kpi-grid" id="kpiGrid"></div>
       </section>
 
-      <section class="section">
+      <section class="section charts-section">
         <h2>الرسوم البيانية</h2>
         <div class="charts">
-          <div class="chart-wrap"><canvas id="callsChart"></canvas></div>
-          <div class="chart-wrap"><canvas id="answerRateChart"></canvas></div>
-          <div class="chart-wrap"><canvas id="comparisonChart"></canvas></div>
+          <div class="chart-wrap chart-card"><canvas id="callsChart"></canvas></div>
+          <div class="chart-wrap chart-card"><canvas id="answerRateChart"></canvas></div>
+          <div class="chart-wrap chart-card"><canvas id="comparisonChart"></canvas></div>
         </div>
       </section>
 
       <section class="section">
         <h2>جدول البيانات</h2>
-        <div class="table-wrap">
+        <div class="table-wrap data-table-wrapper">
           <table>
             <thead id="tableHead"></thead>
             <tbody id="tableBody"></tbody>
@@ -326,6 +368,54 @@
       renderTable(rows);
     }
 
+    async function exportReportToPDF() {
+      const exportBtn = document.getElementById('printBtn');
+      const reportElement = document.getElementById('reportContent');
+      const originalLabel = exportBtn.textContent;
+
+      exportBtn.textContent = 'جاري تجهيز PDF...';
+      exportBtn.disabled = true;
+      document.body.classList.add('exporting-pdf');
+
+      try {
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        state.charts.forEach(chart => chart.resize());
+
+        const options = {
+          margin: [10, 10, 10, 10],
+          filename: 'call-center-performance-report.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            letterRendering: true
+          },
+          jsPDF: {
+            unit: 'mm',
+            format: 'a4',
+            orientation: 'portrait'
+          },
+          pagebreak: {
+            mode: ['avoid-all', 'css', 'legacy'],
+            before: '.pdf-page-break',
+            avoid: ['.kpi-card', '.chart-card', '.summary-card', 'table', 'tr']
+          }
+        };
+
+        await html2pdf().set(options).from(reportElement).save();
+        setStatus('تم تصدير ملف PDF بنجاح.', 'ok');
+      } catch (error) {
+        console.error(error);
+        setStatus('تعذر التصدير المباشر. سيتم فتح الطباعة كخيار احتياطي.', 'error');
+        window.print();
+      } finally {
+        document.body.classList.remove('exporting-pdf');
+        exportBtn.textContent = originalLabel;
+        exportBtn.disabled = false;
+      }
+    }
+
     function init() {
       document.getElementById('generatedDate').textContent = formatDateTimeNow();
       document.getElementById('loadBtn').addEventListener('click', () => {
@@ -343,12 +433,12 @@
         reader.readAsText(file, 'UTF-8');
       });
 
-      document.getElementById('printBtn').addEventListener('click', () => {
+      document.getElementById('printBtn').addEventListener('click', async () => {
         if (!state.normalizedRows.length) {
           setStatus('يرجى تحميل البيانات أولًا قبل التصدير.', 'error');
           return;
         }
-        window.print();
+        await exportReportToPDF();
       });
     }
 
