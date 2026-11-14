@@ -2,6 +2,14 @@
 const LANGUAGE_KEY="report-system-language";
 const WORDS={
 "منصة التقارير المرنة":"Flexible reporting workspace",
+"تصميم التقرير":"Report design",
+"اختر شكل العرض. تبقى البيانات والحسابات كما هي، ويستخدم PDF نفس التصميم.":"Choose a style. Data and calculations stay unchanged, and the same design is used when printing to PDF.",
+"تنفيذي":"Executive",
+"تحليلي":"Analytical",
+"رسمي":"Formal",
+"عصري":"Modern",
+"جميع الحقوق محفوظة.":"All rights reserved.",
+"© 2026 Report System. جميع الحقوق محفوظة.":"© 2026 Report System. All rights reserved.",
 "يتناول التقرير":"This report covers",
 "أعلى نتيجة لمؤشر":"The highest result for",
 "فترة و":"periods and",

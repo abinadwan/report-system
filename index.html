@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report System — التقارير</title><link rel="stylesheet" href="./styles.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report System — التقارير</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./report-designs.css"></head>
 <body>
 <header class="topbar">
   <div class="brand-lockup">
@@ -57,8 +57,17 @@
 </section>
 <section class="app-view" id="view-preview" aria-labelledby="preview-heading" hidden>
 <div class="view-heading"><div><p class="view-eyebrow">Report System / Insights</p><h1 id="preview-heading">عرض المؤشرات</h1><p>راجع النتائج وملاحظات اكتمال البيانات قبل طباعة التقرير.</p></div><button type="button" class="btn secondary" id="backToData">تعديل البيانات</button></div>
+<section class="report-design-picker" aria-labelledby="design-picker-heading">
+  <div class="design-picker-intro"><div><h2 id="design-picker-heading">تصميم التقرير</h2><p>اختر شكل العرض. تبقى البيانات والحسابات كما هي، ويستخدم PDF نفس التصميم.</p></div></div>
+  <div class="design-options" role="radiogroup" aria-label="تصميم التقرير">
+    <label class="design-option"><input type="radio" name="report-design" value="executive" checked><span class="design-option-content"><span class="design-swatch design-swatch-executive" aria-hidden="true"><i></i><b></b><b></b><b></b><em></em></span><strong>تنفيذي</strong><small>Executive</small></span></label>
+    <label class="design-option"><input type="radio" name="report-design" value="analytical"><span class="design-option-content"><span class="design-swatch design-swatch-analytical" aria-hidden="true"><i></i><em></em><b></b><b></b></span><strong>تحليلي</strong><small>Analytical</small></span></label>
+    <label class="design-option"><input type="radio" name="report-design" value="formal"><span class="design-option-content"><span class="design-swatch design-swatch-formal" aria-hidden="true"><i></i><em></em><em></em><em></em></span><strong>رسمي</strong><small>Formal</small></span></label>
+    <label class="design-option"><input type="radio" name="report-design" value="modern"><span class="design-option-content"><span class="design-swatch design-swatch-modern" aria-hidden="true"><i></i><b></b><b></b><b></b><em></em></span><strong>عصري</strong><small>Modern</small></span></label>
+  </div>
+</section>
 <div class="preview-wrap">
-  <article id="preview" class="preview">
+  <article id="preview" class="preview" data-design="executive">
     <div class="preview-header"><span>تقرير تحليلي</span><h2 id="previewTitle" data-no-i18n></h2><p id="previewSubtitle"></p></div>
     <div id="summarySection" class="preview-section"><h3>ملخص الأداء</h3><div id="summaryCards" class="metrics"></div><p id="narrative" class="report-narrative"></p></div>
     <div id="chartSection" class="preview-section"><h3>مقارنة المؤشرات</h3><div id="charts"></div></div>
@@ -70,6 +79,6 @@
 
 </div></section>
 </main>
-<footer class="site-footer"><div class="site-footer-inner"><div class="footer-identity"><img src="./assets/report-system-mark.svg" alt="شعار Report System" width="30" height="30"><div><strong>Report System</strong><p>منصة تقارير تعمل محليًا وتحترم خصوصية البيانات.</p></div></div><div class="footer-legal"><span>© 2026 المساهمون في Report System. متاح بموجب رخصة MIT.</span><a href="./LICENSE" target="_blank" rel="noopener noreferrer">رخصة MIT</a><a href="https://github.com/abinadwan/report-system" target="_blank" rel="noopener noreferrer">GitHub</a></div></div></footer>
+<footer class="site-footer"><div class="site-footer-inner"><div class="footer-identity"><img src="./assets/report-system-mark.svg" alt="شعار Report System" width="30" height="30"><div><strong>Report System</strong><p>منصة تقارير تعمل محليًا وتحترم خصوصية البيانات.</p></div></div><div class="footer-legal"><span>© 2026 Report System. جميع الحقوق محفوظة.</span><a href="https://github.com/abinadwan/report-system" target="_blank" rel="noopener noreferrer">GitHub</a></div></div></footer>
 <script type="module" src="./js/app-v3.js"></script>
 </body></html>

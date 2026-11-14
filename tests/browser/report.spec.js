@@ -196,12 +196,12 @@ test("invalid library backup does not replace existing reports",async ({page})=>
  await expect(page.locator("#reportCards")).toContainText("يبقى محفوظًا");
 });
 
-test("brand header displays original logo, footer and MIT license",async ({page})=>{
+test("brand header displays original logo and repository keeps MIT license",async ({page})=>{
  await expect(page.locator(".brand-lockup img")).toHaveAttribute("src","./assets/report-system-mark.svg");
  const response=await page.request.get("/assets/report-system-mark.svg");
  expect(response.ok()).toBeTruthy();
  expect(await response.text()).toContain("<svg");
- await expect(page.locator(".site-footer")).toContainText("MIT");
+ await expect(page.locator(".site-footer")).not.toContainText("MIT");
  const license=await page.request.get("/LICENSE");
  expect(license.ok()).toBeTruthy();
  expect(await license.text()).toContain("MIT License");
@@ -255,4 +255,65 @@ test("English is responsive on small screens and direction returns to Arabic",as
  await expect(page.locator(".site-footer")).toBeVisible();
  await page.locator("#languageToggle").click();
  await expect(page.locator("html")).toHaveAttribute("dir","rtl");
+});
+
+test("four report display designs update preview immediately and survive reload",async ({page})=>{
+ await page.locator("#continuePreview").click();
+ await expect(page.locator("#view-preview")).toBeVisible();
+ for(const id of ["executive","analytical","formal","modern"]){
+  await page.locator('input[name="report-design"][value="'+id+'"]').check();
+  await expect(page.locator("#preview")).toHaveAttribute("data-design",id);
+  const accent=await page.locator("#preview .preview-header").evaluate(el=>getComputedStyle(el).backgroundImage);
+  if(id==="formal")expect(accent).toBe("none");
+  else expect(accent).not.toBe("none");
+ }
+ await page.locator("#save").evaluate(el=>el.click());
+ await page.reload();
+ await page.locator("#nav-preview").click();
+ await expect(page.locator('input[name="report-design"][value="modern"]')).toBeChecked();
+ await expect(page.locator("#preview")).toHaveAttribute("data-design","modern");
+});
+
+test("design is independent for each saved report and preserved by library backup",async ({page})=>{
+ await page.locator("#continuePreview").click();
+ await page.locator('input[name="report-design"][value="formal"]').check();
+ await page.locator("#nav-library").click();
+ await page.locator("#newReport").click();
+ await page.locator("#continuePreview").click();
+ await expect(page.locator("#preview")).toHaveAttribute("data-design","executive");
+ await page.locator('input[name="report-design"][value="analytical"]').check();
+ await page.locator("#nav-library").click();
+ const [download]=await Promise.all([page.waitForEvent("download"),page.locator("#backupAll").click()]);
+ const backup=JSON.parse((await (await import("node:fs/promises")).readFile(await download.path())).toString("utf8"));
+ expect(backup.reports.map(x=>x.design)).toEqual(["formal","analytical"]);
+ await page.locator("#reportCards .report-card").first().click();
+ await page.locator("#nav-preview").click();
+ await expect(page.locator("#preview")).toHaveAttribute("data-design","formal");
+});
+
+test("report-only themes apply in print and public footer omits license",async ({page})=>{
+ await page.locator("#continuePreview").click();
+ await page.locator('input[name="report-design"][value="formal"]').check();
+ const style=await page.locator("#preview").evaluate(el=>getComputedStyle(el).getPropertyValue("--report-accent-dark").trim());
+ expect(style).toBe("#252d37");
+ await page.emulateMedia({media:"print"});
+ await expect(page.locator(".report-design-picker")).toBeHidden();
+ await expect(page.locator("#preview")).toBeVisible();
+ await expect(page.locator(".site-footer")).toBeHidden();
+ await page.emulateMedia({media:"screen"});
+ const footer=await page.locator(".site-footer").innerText();
+ expect(footer).not.toMatch(/MIT|رخصة/);
+ await expect(page.locator('.site-footer a[href*="github.com"]')).toHaveCount(1);
+ const response=await page.request.get("/LICENSE");
+ expect(response.ok()).toBeTruthy();
+});
+
+test("report design options translate to English without changing chosen theme",async ({page})=>{
+ await page.locator("#continuePreview").click();
+ await page.locator('input[name="report-design"][value="analytical"]').check();
+ await page.locator("#languageToggle").click();
+ await expect(page.locator("#design-picker-heading")).toHaveText("Report design");
+ await expect(page.locator('input[name="report-design"][value="analytical"]')).toBeChecked();
+ await expect(page.locator(".design-option").filter({has:page.locator('input[value="formal"]')})).toContainText("Formal");
+ await expect(page.locator("#preview")).toHaveAttribute("data-design","analytical");
 });

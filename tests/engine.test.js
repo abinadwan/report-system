@@ -120,3 +120,13 @@ test("unbounded ratios may legitimately exceed one hundred percent",()=>{
  r.entries[keyOf("p",1,"a")]=20;r.entries[keyOf("p",1,"b")]=10;
  assert.equal(calc(r)[2].periods[0].result,200);
 });
+
+test("report designs default to executive and reject unknown values",()=>{
+ const report=newReport();
+ assert.equal(report.design,"executive");
+ for(const design of ["executive","analytical","formal","modern"]){
+  assert.doesNotThrow(()=>validate({...report,design}));
+ }
+ assert.doesNotThrow(()=>validate({...report,design:undefined}));
+ assert.throws(()=>validate({...report,design:"unknown"}),/تصميم التقرير/);
+});

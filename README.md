@@ -58,6 +58,21 @@ python -m http.server 5500
 6. انتقل إلى **عرض التقرير** لمراجعة الحسابات والتنبيهات، ثم اطبع أو احفظ PDF.
 7. يمكنك العودة لتعديل البيانات في أي وقت؛ يتم حفظ المسودة في المتصفح.
 
+### تصاميم عرض التقرير
+
+تحتوي شاشة **عرض التقرير** على أربعة تصاميم مستقلة، مع معاينة مباشرة قبل الطباعة:
+
+| التصميم | الاستخدام المقترح |
+|---|---|
+| **تنفيذي (Executive)** | عرض مؤشرات الأداء للإدارة عبر بطاقات واضحة وملخصات مختصرة؛ وهو الشكل الافتراضي |
+| **تحليلي (Analytical)** | إبراز الرسوم والمقارنات بألوان تركوازية وتفاصيل تحليلية أوضح |
+| **رسمي (Formal)** | مستند بألوان محايدة وجداول واضحة يناسب الطباعة الرسمية |
+| **عصري (Modern)** | توزيع بصري حديث وألوان بنفسجية وزرقاء وبطاقات بارزة |
+
+يستطيع المستخدم تغيير التصميم مباشرة، ويُحفظ الاختيار **داخل التقرير نفسه** وينتقل معه في ملفات النسخ الاحتياطي JSON. لا يؤثر التصميم في الأرقام أو الحسابات أو اختيار السنوات والفترات، وتطبّق إعداداته على معاينة الصفحة وملف PDF عند استخدام الطباعة. التقارير القديمة التي لا تحتوي على خاصية تصميم تعرض الشكل التنفيذي افتراضيًا دون ترحيل بيانات.
+
+**الحقوق:** يظهر تذييل المنصة حقوق النشر ورابط المستودع فقط، بينما يبقى ملف [LICENSE](LICENSE) الأصلي في GitHub ولا يظهر رابط الرخصة في الصفحة العامة.
+
 ### استيراد CSV وExcel
 
 **صيغة CSV الطويلة (Long format):** كل صف يمثل قيمة مؤشر واحدة في شهر واحد:
@@ -123,7 +138,8 @@ npm run test:browser
 
 ```text
 index.html                  # الصفحة الرئيسية
-styles.css                  # التصميم والاتجاهات والطباعة
+styles.css                  # التصميم العام والاتجاهات
+report-designs.css          # تصاميم التقارير الأربعة والطباعة
 assets/report-system-mark.svg # الشعار المتجهي
 js/app-v3.js                # سير العمل وإدارة حالة الواجهة
 js/i18n.js                  # العربية والإنجليزية واتجاه الصفحة
@@ -194,6 +210,21 @@ Do not open the application directly as `file://index.html`: ES module imports w
 5. Enter data in the monthly grid or import CSV/XLSX.
 6. Open **View insights** to review metrics, charts, warnings, and tables.
 7. Print or save the resulting report as PDF, or return to adjust the data.
+
+### Report display designs
+
+The **Report preview** screen offers four switchable report layouts with live previews:
+
+| Style | Best for |
+|---|---|
+| **Executive** (default) | KPI cards and management summaries |
+| **Analytical** | Chart-focused comparisons and performance analysis |
+| **Formal** | Monochrome, table-led documents intended for print |
+| **Modern** | Editorial typography, bold cards, and purple/blue accents |
+
+Selecting a style changes **presentation only**. Calculations, metrics, source data, and period selections are unchanged. Each report retains its own chosen style across reloads, individual JSON exports, and full-library backups. Existing reports with no stored design remain in the Executive layout. Browser print / Save as PDF uses the same style applied to the preview. The website footer shows copyright and a repository link; the [MIT license](LICENSE) remains in the GitHub repository, rather than in the public footer.
+
+Report-specific styling is isolated in `report-designs.css`; the underlying reporting engine is shared across all layouts.
 
 ### CSV and Excel formats
 

@@ -1,6 +1,7 @@
 // Report System V2 calculation engine. Pure functions: no DOM or storage.
 export const MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 export const PRESETS = Object.freeze({year:[1,2,3,4,5,6,7,8,9,10,11,12],h1:[1,2,3,4,5,6],h2:[7,8,9,10,11,12],q1:[1,2,3],q2:[4,5,6],q3:[7,8,9],q4:[10,11,12]});
+export const REPORT_DESIGNS = Object.freeze(["executive","analytical","formal","modern"]);
 export const TEMPLATES = {
   general:{label:"تقرير عام",metrics:[{name:"عدد المعاملات",unit:"معاملة",method:"sum"}]},
   "call-center":{label:"مركز الاتصال",metrics:[{name:"المكالمات الواردة",unit:"مكالمة",method:"sum"},{name:"المكالمات المجابة",unit:"مكالمة",method:"sum"},{name:"معدل الإجابة",unit:"%",method:"ratio",numeratorName:"المكالمات المجابة",denominatorName:"المكالمات الواردة",boundedRatio:true}]},
@@ -10,7 +11,7 @@ export const TEMPLATES = {
 export function uid(){return globalThis.crypto?.randomUUID?.() || Date.now().toString(36)+"-"+Math.random().toString(36).slice(2);}
 export function period(year=new Date().getFullYear()){return {id:uid(),name:"",year,months:[...PRESETS.year]};}
 export function metric(name="مؤشر جديد",unit="وحدة",method="sum"){return {id:uid(),name,unit,method};}
-export function newReport(){return {schemaVersion:3,title:"تقرير أداء جديد",kind:"comparison",template:"general",periods:[period(),period(new Date().getFullYear()-1)],metrics:[metric("عدد المعاملات","معاملة","sum")],entries:{},sections:["summary","chart","table"]};}
+export function newReport(){return {schemaVersion:3,title:"تقرير أداء جديد",kind:"comparison",template:"general",periods:[period(),period(new Date().getFullYear()-1)],metrics:[metric("عدد المعاملات","معاملة","sum")],entries:{},sections:["summary","chart","table"],design:"executive"};}
 export function applyTemplate(report,key){
  if(!Object.hasOwn(TEMPLATES,key))throw Error("قالب غير معروف");
  const incoming=TEMPLATES[key].metrics.map(m=>metric(m.name,m.unit,m.method));
@@ -20,6 +21,7 @@ export function applyTemplate(report,key){
 export function validate(report){
  if(!report || typeof report!=="object" || report.schemaVersion!==3)throw Error("صيغة التقرير غير مدعومة.");
  if(typeof report.title!=="string" || report.title.length>250)throw Error("العنوان غير صالح.");
+ if(report.design!==undefined&&!REPORT_DESIGNS.includes(report.design))throw Error("تصميم التقرير غير صالح.");
  if(!["comparison","periodic","trend","executive"].includes(report.kind))throw Error("هدف التقرير غير معروف.");
  if(!Object.hasOwn(TEMPLATES,report.template))throw Error("القالب غير معروف.");
  if(!Array.isArray(report.periods)||!report.periods.length||report.periods.length>100)throw Error("عدد الفترات غير صالح.");

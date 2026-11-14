@@ -130,7 +130,24 @@ function renderData(){
  </div><p class="hint">القيم المعروضة للمؤشر: <strong>${escapeHTML(metric.name)}</strong> · ${escapeHTML(metric.unit)}. الخانة الفارغة تعني عدم توفر بيانات، وليست صفرًا.</p>
  <div class="entry-table-wrap"><table class="entry-table"><thead><tr><th scope="col">الشهر</th>${head}</tr></thead><tbody>${cells}</tbody></table></div>`;
 }
+const DESIGN_IDS=new Set(["executive","analytical","formal","modern"]);
+function syncReportDesign(){
+ const design=DESIGN_IDS.has(report.design)?report.design:"executive";
+ $("preview").dataset.design=design;
+ document.querySelectorAll('input[name="report-design"]').forEach(option=>{
+  option.checked=option.value===design;
+ });
+}
+document.querySelectorAll('input[name="report-design"]').forEach(option=>{
+ option.addEventListener("change",()=>{
+  if(!option.checked||!DESIGN_IDS.has(option.value))return;
+  report.design=option.value;
+  syncReportDesign();
+  scheduleSave();
+ });
+});
 function draw(){
+ syncReportDesign();
  $("previewTitle").textContent=report.title.trim()||"تقرير جديد";
  $("previewSubtitle").textContent=({comparison:"مقارنة أداء",periodic:"تقرير دوري",trend:"تحليل اتجاهات",executive:"ملخص تنفيذي"})[report.kind]+" · "+TEMPLATES[report.template].label;
  let sections;
