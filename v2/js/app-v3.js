@@ -1,12 +1,13 @@
 import {MONTHS,PRESETS,TEMPLATES,uid,metric,period,newReport,applyTemplate,validate,calc,comparison,format,keyOf} from "./engine.js";
 import {parseCSV,readLongFormat,encodeCSV} from "./csv.js";
+import {writeDraft,readDraft} from "./storage.js";
 const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 const KEY="report-system-v2-v3-draft";
 let report=restoreDraft(),saveTimer;
 function restoreDraft(){try{const v=JSON.parse(localStorage.getItem(KEY));return validate(v);}catch{return newReport();}}
 function status(text){$("status").textContent=text;}
-function saveDraft(){try{validate(report);localStorage.setItem(KEY,JSON.stringify(report));status("تم الحفظ على هذا المتصفح.");}catch(e){status("تعذر الحفظ: "+e.message);}}
+function saveDraft(){try{validate(report);localStorage.setItem(KEY,JSON.stringify(report));writeDraft(structuredClone(report)).catch(()=>{});status("تم الحفظ على هذا المتصفح.");}catch(e){status("تعذر الحفظ: "+e.message);}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveDraft,650);}
 function syncTop(){$("title").value=report.title;$("kind").value=report.kind;$("template").value=report.template;document.querySelectorAll("[data-section]").forEach(el=>el.checked=report.sections.includes(el.dataset.section));}
 function presetOf(p){if(p.scope==="custom")return "custom";return Object.entries(PRESETS).find(([,months])=>months.length===p.months.length&&months.every(m=>p.months.includes(m)))?.[0]||"custom";}
@@ -63,7 +64,10 @@ function draw(){
  if(report.metrics.some(m=>m.method==="average"))warnings.push("متوسط الأشهر غير مرجح؛ لا تستخدمه لحساب نسب تشغيلية مجمعة مثل معدل الإجابة.");
  $("warnings").textContent=warnings.join(" ");
 }
-function rerender(){syncTop();renderMetrics();renderPeriods();renderData();draw();scheduleSave();}
+function rerender(){syncTop();renderMetrics();renderPeriods();renderData();draw();
+if(!localStorage.getItem(KEY)){
+ readDraft().then(saved=>{if(saved&&!localStorage.getItem(KEY)){report=validate(saved);syncTop();renderMetrics();renderPeriods();renderData();draw();status("تم استرداد المسودة من قاعدة البيانات المحلية.");}}).catch(()=>{});
+}scheduleSave();}
 function changeTop(id,property){$(id).addEventListener("input",e=>{report[property]=e.target.value;draw();scheduleSave();});}
 changeTop("title","title");changeTop("kind","kind");
 $("template").addEventListener("change",e=>{
