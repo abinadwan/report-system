@@ -20,6 +20,7 @@ Then visit `http://localhost:5500/v2/` in a modern browser.
 - Any four-digit year and up to 100 named periods, with annual, half-year, quarterly or custom month selection. Overlapping periods are supported.
 - Manual monthly values, missing-data warnings, multi-metric totals and comparison percentages against the first period.
 - Import/export UTF-8 CSV in long format: `period,year,month,metric,value`. The `period` column is optional for import. Period names distinguish multiple periods within the same year.
+- Import wide CSV with `Year,Month,Calls,Answered` or `Date,Orders` and arbitrary metric columns; Arabic `السنة`, `الشهر`, Arabic numerals and Arabic month names are also supported.
 - JSON backup/restore, local browser draft storage and print / Save to PDF.
 - No third-party runtime scripts, external CDN, backend or login.
 
@@ -28,9 +29,9 @@ Then visit `http://localhost:5500/v2/` in a modern browser.
 - Only sum and unweighted observed-month average are currently supported. **Do not use the average method for weighted operational rates.**
 - CSV import replaces the current periods and data after confirmation. Export only includes entered values, not blank months.
 - No native `.xlsx` parser yet; export Excel data as CSV for import.
-- Data is saved in `localStorage`, not yet IndexedDB. Saving on another browser or origin does not share it.
+- Drafts are saved to `localStorage` and mirrored to IndexedDB where available; backup JSON remains recommended. Another browser or origin does not share them.
 - Current PDF uses browser print and is not visually certified across browsers.
-- Browser E2E and accessibility audits are not complete. GitHub Actions runs engine and CSV regression tests.
+- GitHub Actions runs engine, CSV and Chromium browser regression tests; accessibility and multi-browser audits are not complete.
 - V1 reports are not automatically migrated. V1 data remains untouched.
 - The app is designed for nonnegative measures; rates, negative financial values and computed metrics need additional metric types.
 
