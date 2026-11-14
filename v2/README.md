@@ -1,50 +1,47 @@
-# Report System 2.0 — Foundation
+# Report System 2.0 — dynamic report builder
 
-A separate, local-first prototype built with HTML, CSS and vanilla JavaScript ES modules. Open through an HTTP server (not file://) so ES modules work reliably.
+Prototype built with **HTML + CSS + vanilla JavaScript ES modules**, without React or a frontend build system. V1 remains at repository root.
 
-## Run
+## Run locally
 
-From the repository root:
+Run from repository root:
 
 ```sh
 python -m http.server 5500
 ```
 
-Open http://localhost:5500/v2/
+Then visit `http://localhost:5500/v2/` in a modern browser.
 
-## Delivered in this foundation
+## Available features
 
-- User-selectable report intent and starter domain template.
-- Dynamic period cards with any 4-digit year and flexible month sets; 100-period safety limit.
-- One editable, nonnegative numeric metric per report; sum or observed-month average.
-- Missing months treated as missing, **not zero**.
-- Period totals, monthly averages, comparisons against the first period, simple bar visualization, and mismatch warnings.
-- Save draft in browser localStorage, export/import versioned JSON backup, and browser print / Save as PDF.
-- No backend, user accounts, external CDN or framework dependencies.
-- V1 remains available at the repository root.
+- Report intent: periodic, comparison, trends or executive (currently changes report heading only; advanced type-specific layouts are upcoming).
+- General, call center, project and sales starter metric presets. Selecting another preset explicitly clears existing metric values.
+- Add, edit or delete up to 30 metrics per report. Each metric can calculate sum or average of **observed months**.
+- Any four-digit year and up to 100 named periods, with annual, half-year, quarterly or custom month selection. Overlapping periods are supported.
+- Manual monthly values, missing-data warnings, multi-metric totals and comparison percentages against the first period.
+- Import/export UTF-8 CSV in long format: `period,year,month,metric,value`. The `period` column is optional for import. Period names distinguish multiple periods within the same year.
+- JSON backup/restore, local browser draft storage and print / Save to PDF.
+- No third-party runtime scripts, external CDN, backend or login.
 
-## Explicit limitations
+## Limitations and caveats
 
-- **One metric per report** in this first foundation (not a complete metric builder).
-- No Excel/CSV import yet, no templates with field mappings or weighted KPI definitions.
-- No daily/date-range granularity yet; monthly periods only.
-- This prototype uses localStorage rather than the planned IndexedDB.
-- No PDF page-layout certification, automated browser tests, or multi-user sync.
-- Start V2 via an HTTP server, not by double-clicking index.html.
-- Old V1 reports are not migrated automatically. V1 storage remains untouched.
+- Only sum and unweighted observed-month average are currently supported. **Do not use the average method for weighted operational rates.**
+- CSV import replaces the current periods and data after confirmation. Export only includes entered values, not blank months.
+- No native `.xlsx` parser yet; export Excel data as CSV for import.
+- Data is saved in `localStorage`, not yet IndexedDB. Saving on another browser or origin does not share it.
+- Current PDF uses browser print and is not visually certified across browsers.
+- Browser E2E and accessibility audits are not complete. GitHub Actions runs engine and CSV regression tests.
+- V1 reports are not automatically migrated. V1 data remains untouched.
+- The app is designed for nonnegative measures; rates, negative financial values and computed metrics need additional metric types.
 
-## Calculation contract
+## Testing
 
-- Sum adds available selected-month values.
-- Average is the mean of **available months**, not all selected months.
-- Missing months lead to an explicit warning.
-- Percentage change compares each computed period result with the **first** period and is omitted if the baseline is zero or either value is missing.
-- Comparing periods of different lengths raises a warning. For fair comparisons, use comparable periods and appropriate metric definitions.
+GitHub Actions runs:
 
-## Next milestones
+```sh
+cd v2
+npm run check
+npm test
+```
 
-1. Unit tests for period validation and computations.
-2. Multiple user-defined metrics and correct weighted KPI aggregation.
-3. CSV/Excel import, data mapping, validation, and IndexedDB persistence.
-4. Report composer, specialized schemas, and print-quality PDF engine.
-5. E2E tests, accessibility audit, and V1 migration utility.
+V2 is intentionally isolated under `/v2` until quality checks and feature parity justify a merge into the default experience.
