@@ -37,3 +37,6 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid 
 .actions label:has(input[type=checkbox]){display:inline-flex;align-items:center;gap:6px;border:1px solid #d9e3ee;border-radius:8px;padding:7px 10px;margin:0;background:#fafcfe}
 .actions label:has(input[type=checkbox]) input{accent-color:#2364aa}
 @media print{.preview{overflow:visible}.preview-section{break-inside:auto}.data-metric,.chart-group,table tr{break-inside:avoid}thead{display:table-header-group}}
+
+.section-order{display:grid;gap:7px;margin-top:13px}.section-order-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #dce6f2;border-radius:9px;padding:8px}.section-order-row .btn{padding:5px 10px;margin-inline-start:5px}.section-order-row button:disabled{opacity:.35;cursor:not-allowed}
+.report-narrative{margin:0 18px 14px;line-height:1.65;color:#465b75}
