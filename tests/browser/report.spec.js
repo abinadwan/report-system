@@ -153,3 +153,17 @@ test("switching input metric tabs preserves previous values",async ({page})=>{
  await page.locator("#dataEditors [data-metric-tab]").first().click();
  await expect(page.locator("#dataEditors [data-entry]").first()).toHaveValue("75");
 });
+
+test("full library JSON restore replaces the current reports with explicit consent",async ({page})=>{
+ await page.locator("#title").fill("محفوظ سابقًا");
+ await page.locator("#save").click();
+ const backup=await page.evaluate(()=>JSON.stringify({schemaVersion:3,reports:JSON.parse(localStorage.getItem("report-system-v2-library"))}));
+ await page.locator("#nav-library").click();
+ await page.locator("#newReport").click();
+ await page.locator("#nav-library").click();
+ await expect(page.locator("#reportCards .report-card")).toHaveCount(2);
+ page.on("dialog",dialog=>dialog.accept());
+ await page.locator("#restoreAll").setInputFiles({name:"library.json",mimeType:"application/json",buffer:Buffer.from(backup)});
+ await expect(page.locator("#reportCards .report-card")).toHaveCount(1);
+ await expect(page.locator("#reportCards")).toContainText("محفوظ سابقًا");
+});
