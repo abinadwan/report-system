@@ -1,4 +1,4 @@
-# Report System 2.0 — dynamic report builder
+# Report System — phase 2.1 reporting workflow
 
 Built with **HTML + CSS + vanilla JavaScript ES modules**, without React or a frontend build system. The previous application code has been removed from the repository; the migration utility reads V1 browser data if present.
 
@@ -11,6 +11,16 @@ python -m http.server 5500
 ```
 
 Then visit `http://localhost:5500/` in a modern browser.
+
+## Workflow
+
+The browser app now has three focused screens:
+
+1. **تقاريري** — select, create, duplicate, back up, or migrate reports.
+2. **إدخال البيانات** — configure periods and metrics, then enter or import source values.
+3. **عرض التقرير** — review KPIs, chart/table sections, warnings, and print PDF.
+
+Navigation stays on the same origin without reloading the app. Saved reports are mirrored to IndexedDB as a complete library for recovery; per-report localStorage records are also retained. Period-to-period changes are not calculated when either selected period is incomplete or their month counts differ.
 
 ## Available features
 
