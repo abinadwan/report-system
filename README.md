@@ -9,7 +9,7 @@ Internal Executive Reporting System is a lightweight internal reporting and exec
 - Live KPI calculations and instant preview updates.
 - Executive summary generation in Arabic.
 - Dynamic charts using Chart.js.
-- Theme support (SDAIA, Light, Dark Executive).
+- Theme support (Light, Dark Executive).
 - PDF export through native browser print.
 - Responsive layout for desktop and mobile.
 - Dynamic logo upload and removal per report.
@@ -59,11 +59,10 @@ The print stylesheet forces a clean white output theme for consistent executive 
 Themes are implemented through CSS custom properties (`--bg`, `--surface`, `--text`, `--chart-*`, etc.) and applied using `body[data-theme="..."]`.
 
 Available themes:
-- `sdaia`
 - `light`
 - `dark-executive`
 
-For printing, theme values are overridden to white-page output for maximum PDF consistency.
+The Light theme is the default for new reports. Reports saved with unsupported legacy themes automatically switch to Light when loaded. For printing, theme values are overridden to white-page output for maximum PDF consistency.
 
 ## Data persistence
 All reports are saved in the browser via LocalStorage:
