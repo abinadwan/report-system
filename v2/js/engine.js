@@ -3,7 +3,7 @@ export const MONTHS = ["يناير","فبراير","مارس","أبريل","ما
 export const PRESETS = Object.freeze({year:[1,2,3,4,5,6,7,8,9,10,11,12],h1:[1,2,3,4,5,6],h2:[7,8,9,10,11,12],q1:[1,2,3],q2:[4,5,6],q3:[7,8,9],q4:[10,11,12]});
 export const TEMPLATES = {
   general:{label:"تقرير عام",metrics:[{name:"عدد المعاملات",unit:"معاملة",method:"sum"}]},
-  "call-center":{label:"مركز الاتصال",metrics:[{name:"المكالمات الواردة",unit:"مكالمة",method:"sum"},{name:"المكالمات المجابة",unit:"مكالمة",method:"sum"}]},
+  "call-center":{label:"مركز الاتصال",metrics:[{name:"المكالمات الواردة",unit:"مكالمة",method:"sum"},{name:"المكالمات المجابة",unit:"مكالمة",method:"sum"},{name:"معدل الإجابة",unit:"%",method:"ratio",numeratorName:"المكالمات المجابة",denominatorName:"المكالمات الواردة"}]},
   projects:{label:"إدارة المشاريع",metrics:[{name:"المهام المكتملة",unit:"مهمة",method:"sum"},{name:"المهام الجديدة",unit:"مهمة",method:"sum"}]},
   sales:{label:"المبيعات",metrics:[{name:"إجمالي المبيعات",unit:"ر.س",method:"sum"},{name:"عدد الطلبات",unit:"طلب",method:"sum"}]}
 };
@@ -14,6 +14,7 @@ export function newReport(){return {schemaVersion:3,title:"تقرير أداء �
 export function applyTemplate(report,key){
  if(!Object.hasOwn(TEMPLATES,key))throw Error("قالب غير معروف");
  const incoming=TEMPLATES[key].metrics.map(m=>metric(m.name,m.unit,m.method));
+ incoming.forEach((m,i)=>{const source=TEMPLATES[key].metrics[i];if(source.method==="ratio"){m.numeratorId=incoming.find(x=>x.name===source.numeratorName)?.id;m.denominatorId=incoming.find(x=>x.name===source.denominatorName)?.id;}});
  return {...report,template:key,metrics:incoming,entries:{}}; // user must explicitly confirm replacing values
 }
 export function validate(report){
@@ -33,8 +34,14 @@ export function validate(report){
    if(!Array.isArray(p.months)||!p.months.length||p.months.length>12||new Set(p.months).size!==p.months.length||p.months.some(m=>!Number.isInteger(m)||m<1||m>12))throw Error("الأشهر المختارة غير صالحة.");
  }
  for(const m of report.metrics){
-   if(typeof m.id!=="string"||!m.id||ids.has(m.id)||typeof m.name!=="string"||!m.name.trim()||m.name.length>100||typeof m.unit!=="string"||m.unit.length>40||!["sum","average"].includes(m.method))throw Error("تعريف مؤشر غير صالح.");
+   if(typeof m.id!=="string"||!m.id||ids.has(m.id)||typeof m.name!=="string"||!m.name.trim()||m.name.length>100||typeof m.unit!=="string"||m.unit.length>40||!["sum","average","ratio"].includes(m.method))throw Error("تعريف مؤشر غير صالح.");
    ids.add(m.id);
+ }
+ for(const m of report.metrics){
+   if(m.method==="ratio"){
+     const numerator=report.metrics.find(x=>x.id===m.numeratorId),denominator=report.metrics.find(x=>x.id===m.denominatorId);
+     if(!numerator||!denominator||numerator.id===denominator.id||numerator.method==="ratio"||denominator.method==="ratio")throw Error("اختر مؤشرين أساسيين مختلفين لبسط ومقام النسبة.");
+   }
  }
  for(const [key,value] of Object.entries(report.entries)){
    if(key.length>150||!(value===null||value===""||typeof value==="number"&&Number.isFinite(value)&&value>=0))throw Error("قيمة مؤشر غير صالحة.");
@@ -48,6 +55,18 @@ export function calc(report){
    metric:m,
    periods:report.periods.map(p=>{
      const months=[...p.months].sort((a,b)=>a-b);
+     if(m.method==="ratio"){
+       const values=months.map(month=>{
+         const n=report.entries[keyOf(p.id,month,m.numeratorId)];
+         const d=report.entries[keyOf(p.id,month,m.denominatorId)];
+         return {month,value:n==null||n===""||d==null||d===""||d===0?null:n/d*100,numerator:n,denominator:d};
+       });
+       const valid=values.filter(v=>v.value!==null);
+       const numerator=valid.reduce((sum,v)=>sum+v.numerator,0);
+       const denominator=valid.reduce((sum,v)=>sum+v.denominator,0);
+       const result=denominator>0?numerator/denominator*100:null;
+       return {id:p.id,name:p.name.trim()||String(p.year),year:p.year,months,values,result,total:null,average:null,count:valid.length,expected:months.length,complete:valid.length===months.length};
+     }
      const values=months.map(month=>{const v=report.entries[keyOf(p.id,month,m.id)];return {month,value:v===null||v===undefined||v===""?null:v};});
      const observed=values.filter(v=>v.value!==null);
      const total=observed.reduce((sum,x)=>sum+x.value,0);
