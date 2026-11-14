@@ -152,6 +152,7 @@ function draw(){
  const warnings=[];
  if(sections.some(s=>s.periods.some(p=>!p.complete)))warnings.push("هناك أشهر دون بيانات. النتائج تستند إلى الأشهر المدخلة فقط.");
  if(new Set(report.periods.map(p=>p.months.length)).size>1)warnings.push("الفترات مختلفة الطول؛ المقارنة بين الإجماليات قد تكون مضللة. استخدم المتوسط الشهري أو فترات متساوية.");
+ if(sections.some(section=>comparison(section.periods).some(p=>!p.comparable)))warnings.push("نسب التغير غير المعروضة تعني أن إحدى الفترات ناقصة البيانات أو أن الفترات مختلفة المدة؛ راجع الأشهر قبل المقارنة.");
  if(report.metrics.some(m=>m.method==="average"))warnings.push("متوسط الأشهر غير مرجح؛ لا تستخدمه لحساب نسب تشغيلية مجمعة مثل معدل الإجابة.");
  $("warnings").textContent=warnings.join(" ");
 }
