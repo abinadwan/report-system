@@ -3,8 +3,15 @@ import {parseCSV,readFlexibleFormat,encodeCSV} from "./csv.js";
 import {writeDraft,readDraft,writeLibrary,readLibrary} from "./storage.js";
 import {readXLSX} from "./xlsx.js";
 import {makeLibraryBackup,parseLibraryBackup} from "./library-backup.js";
+import {locale,setLocale,startLocalization,translateText} from "./i18n.js";
 const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+function blankReport(){
+ const result=blankReport();
+ if(locale()==="en"){result.title="New performance report";result.metrics[0].name="Transactions";result.metrics[0].unit="transaction";}
+ return result;
+}
+const ask=message=>window.confirm(translateText(message));
 const KEY="report-system-v2-v3-draft";
 const LIBRARY_KEY="report-system-v2-library";
 const ACTIVE_KEY="report-system-v2-active";
@@ -55,9 +62,9 @@ function openPreview(){
 }
 function newReportAndOpen(){
   if(library.length>=100)return status("الحد الأقصى 100 تقرير.");
-  saveDraft();report=newReport();report.id=uid();library.push(report);rerender();showView("data");
+  saveDraft();report=blankReport();report.id=uid();library.push(report);rerender();showView("data");
 }
-function restoreDraft(){try{const v=JSON.parse(localStorage.getItem(KEY));return validate(v);}catch{return newReport();}}
+function restoreDraft(){try{const v=JSON.parse(localStorage.getItem(KEY));return validate(v);}catch{return blankReport();}}
 function status(text){$("status").textContent=text;$("libraryStatus").textContent=text;}
 function saveDraft(){
  try{validate(report);}catch(e){status("راجع البيانات قبل الحفظ: "+e.message);return false;}
@@ -160,12 +167,14 @@ function rerender(){syncTop();renderMetrics();renderPeriods();renderData();draw(
 function changeTop(id,property){$(id).addEventListener("input",e=>{report[property]=e.target.value;draw();scheduleSave();});}
 changeTop("title","title");changeTop("kind","kind");
 $("template").addEventListener("change",e=>{
- if(!confirm("تغيير القالب سيستبدل جميع المؤشرات والقيم المدخلة. هل تريد المتابعة؟")){e.target.value=report.template;return;}
- report=applyTemplate(report,e.target.value);rerender();
+ if(!ask("تغيير القالب سيستبدل جميع المؤشرات والقيم المدخلة. هل تريد المتابعة؟")){e.target.value=report.template;return;}
+ report=applyTemplate(report,e.target.value);
+ if(locale()==="en")report.metrics.forEach(m=>{m.name=translateText(m.name);m.unit=translateText(m.unit);});
+ rerender();
 });
 document.querySelectorAll("[data-section]").forEach(el=>el.addEventListener("change",()=>{const chosen=Array.from(document.querySelectorAll("[data-section]:checked"),e=>e.dataset.section);report.sections=[...report.sections.filter(id=>chosen.includes(id)),...chosen.filter(id=>!report.sections.includes(id))];draw();renderSections();scheduleSave();}));
 $("sectionOrder").addEventListener("click",e=>{const button=e.target.closest("[data-move]");if(!button)return;const id=button.closest("[data-section-id]")?.dataset.sectionId;const index=report.sections.indexOf(id),next=index+Number(button.dataset.move);if(index<0||next<0||next>=report.sections.length)return;[report.sections[index],report.sections[next]]=[report.sections[next],report.sections[index]];renderSections();scheduleSave();});
-$("addMetric").onclick=()=>{if(report.metrics.length>=30)return status("الحد الأقصى 30 مؤشرًا.");report.metrics.push(metric());rerender();};
+$("addMetric").onclick=()=>{if(report.metrics.length>=30)return status("الحد الأقصى 30 مؤشرًا.");const item=metric();if(locale()==="en"){item.name="New metric";item.unit="unit";}report.metrics.push(item);rerender();};
 $("addPeriod").onclick=()=>{if(report.periods.length>=100)return status("الحد الأقصى 100 فترة.");report.periods.push(period());rerender();};
 $("metricEditors").addEventListener("change",e=>{
  const node=e.target.closest("[data-metric]");const m=report.metrics.find(m=>m.id===node?.dataset.metric);
@@ -238,7 +247,7 @@ $("importCsv").onchange=async e=>{
   const keys=[...new Set(data.map(r=>JSON.stringify([r.period,r.year])))];
   const names=[...new Set(data.map(r=>r.metric))];
   if(keys.length>100||names.length>30)throw Error("الملف يتجاوز الحد الأقصى للفترات أو المؤشرات.");
-  if(!confirm("سيستبدل الاستيراد الفترات والمؤشرات والقيم الحالية. هل تريد المتابعة؟"))return;
+  if(!ask("سيستبدل الاستيراد الفترات والمؤشرات والقيم الحالية. هل تريد المتابعة؟"))return;
   const periods=keys.map(k=>{const [name,year]=JSON.parse(k);return {...period(year),name,months:[...new Set(data.filter(r=>r.year===year&&r.period===name).map(r=>r.month))].sort((a,b)=>a-b)};});
   const metrics=names.map(name=>metric(name,"","sum"));
   const entries={};
@@ -251,13 +260,13 @@ $("save").onclick=saveDraft;
 $("backup").onclick=()=>{try{validate(report);download("report-system-v2.json",JSON.stringify(report,null,2),"application/json");}catch(e){status(e.message);}};
 $("restore").onchange=async e=>{
  const file=e.target.files?.[0];e.target.value="";if(!file)return;
- try{if(file.size>5*1024*1024)throw Error("الملف كبير جدًا.");const data=validate(JSON.parse(await file.text()));if(!confirm("استبدال التقرير الحالي بالنسخة الاحتياطية؟"))return;report={...data,id:report.id};rerender();status("تم استيراد النسخة.");}catch(err){status("تعذر الاستيراد: "+err.message);}
+ try{if(file.size>5*1024*1024)throw Error("الملف كبير جدًا.");const data=validate(JSON.parse(await file.text()));if(!ask("استبدال التقرير الحالي بالنسخة الاحتياطية؟"))return;report={...data,id:report.id};rerender();status("تم استيراد النسخة.");}catch(err){status("تعذر الاستيراد: "+err.message);}
 };
-$("clear").onclick=()=>{if(!confirm("سيتم مسح محتوى التقرير الحالي. هل حفظت نسخة احتياطية؟"))return;const id=report.id;report=newReport();report.id=id;rerender();};
+$("clear").onclick=()=>{if(!ask("سيتم مسح محتوى التقرير الحالي. هل حفظت نسخة احتياطية؟"))return;const id=report.id;report=blankReport();report.id=id;rerender();};
 $("newReport").onclick=newReportAndOpen;
 $("startNewReport").onclick=newReportAndOpen;
 $("duplicateReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");saveDraft();report=structuredClone(report);report.id=uid();report.title+=" (نسخة)";library.push(report);rerender();};
-$("deleteReport").onclick=()=>{if(!confirm("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);const deletedId=report.id;library=library.filter(r=>r.id!==deletedId);try{localStorage.removeItem("report-system-v2-record:"+deletedId);}catch{}if(!library.length){report=newReport();report.id=uid();library=[report];}else report=library[0];rerender();};
+$("deleteReport").onclick=()=>{if(!ask("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);const deletedId=report.id;library=library.filter(r=>r.id!==deletedId);try{localStorage.removeItem("report-system-v2-record:"+deletedId);}catch{}if(!library.length){report=blankReport();report.id=uid();library=[report];}else report=library[0];rerender();};
 $("reportSelect").onchange=e=>{const selectedId=e.target.value;saveDraft();const selected=library.find(r=>r.id===selectedId);if(selected){report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();}};
 $("backupAll").onclick=()=>{
  try{
@@ -275,7 +284,7 @@ $("restoreAll").onchange=async e=>{
  try{
   if(file.size>8*1024*1024)throw Error("النسخة الاحتياطية أكبر من 8 ميجابايت.");
   const restored=parseLibraryBackup(await file.text());
-  if(!confirm("سيتم استبدال "+library.length+" تقريرًا حاليًا بـ "+restored.length+" تقريرًا من النسخة الاحتياطية. تأكد من حفظ نسخة من التقارير الحالية أولًا. هل تتابع؟"))return;
+  if(!ask("سيتم استبدال "+library.length+" تقريرًا حاليًا بـ "+restored.length+" تقريرًا من النسخة الاحتياطية. تأكد من حفظ نسخة من التقارير الحالية أولًا. هل تتابع؟"))return;
   // Cancel any pending autosave of the old library, and commit the new library
   // before showing a success message or changing the visible report.
   clearTimeout(saveTimer);
@@ -319,6 +328,13 @@ $("reportCards").addEventListener("click",e=>{
   showView("data");
 });
 $("print").onclick=()=>{try{validate(report);window.print();}catch(e){status(e.message);}};
+$("languageToggle").addEventListener("click",()=>{
+ const next=locale()==="ar"?"en":"ar";
+ setLocale(next);
+ renderLibrary();renderMetrics();renderPeriods();renderData();draw();renderSections();
+ // Apply immediately; the mutation observer also localizes future renders.
+ setLocale(next);
+});
 syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
 showView(location.hash.replace("#","")||"library");
 // Recover the complete library from IndexedDB if localStorage was cleared or corrupted.
@@ -342,3 +358,5 @@ if(needsRecovery){
   }
  }).catch(()=>{});
 }
+
+startLocalization();
