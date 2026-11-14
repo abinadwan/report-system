@@ -73,5 +73,5 @@ test("Excel XLSX first sheet imports wide-format metrics",async ({page})=>{
  await page.locator("#importCsv").setInputFiles({name:"data.xlsx",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",buffer});
  await expect(page.locator("#metricEditors .period-card")).toHaveCount(1);
  await expect(page.locator("#periodEditors .period-card")).toHaveCount(1);
- await expect(page.locator("#summaryCards .metric strong")).toContainText(["٤٤"]);
+ await expect(page.locator("#summaryCards .metric strong")).toContainText("٤٤");
 });
