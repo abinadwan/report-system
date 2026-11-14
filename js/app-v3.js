@@ -105,11 +105,23 @@ function renderPeriods(){
  <div class="month-checks">${MONTHS.map((month,j)=>`<label><input type="checkbox" data-month="${j+1}" ${p.months.includes(j+1)?"checked":""}>${month}</label>`).join("")}</div><p class="hint">${p.months.length} شهر</p>
  </section>`).join("");
 }
+let selectedDataMetricId=null;
 function renderData(){
- $("dataEditors").innerHTML=report.periods.map((p,i)=>`<section class="data-block"><h3>${escapeHTML(p.name||"الفترة "+(i+1))} — ${escapeHTML(p.year)}</h3>
- ${report.metrics.filter(m=>m.method!=="ratio").map(m=>`<div class="data-metric"><h4>${escapeHTML(m.name)} <small>${escapeHTML(m.unit)}</small></h4><div class="data-grid">
- ${[...p.months].sort((a,b)=>a-b).map(month=>{const key=keyOf(p.id,month,m.id);return `<div><label>${MONTHS[month-1]}</label><input type="number" min="0" step="any" data-entry="${escapeHTML(key)}" placeholder="غير متوفر" value="${escapeHTML(report.entries[key]??"")}"></div>`}).join("")}
- </div></div>`).join("")}</section>`).join("");
+ const base=report.metrics.filter(m=>m.method!=="ratio");
+ if(!base.length){$("dataEditors").innerHTML="<p class='hint'>أضف مؤشرًا رقميًا أساسيًا حتى تتمكن من إدخال البيانات.</p>";return;}
+ const metric=base.find(m=>m.id===selectedDataMetricId)||base[0];
+ selectedDataMetricId=metric.id;
+ const activeMonths=[...new Set(report.periods.flatMap(p=>p.months))].sort((a,b)=>a-b);
+ const head=report.periods.map((p,i)=>`<th scope="col"><span>${escapeHTML(p.name||"الفترة "+(i+1))}</span><small>${escapeHTML(p.year)}</small></th>`).join("");
+ const cells=activeMonths.map((month,row)=>`<tr><th scope="row">${MONTHS[month-1]}</th>${report.periods.map((p,col)=>{
+  if(!p.months.includes(month))return '<td class="unused-cell"><span aria-label="شهر غير محدد">—</span></td>';
+  const key=keyOf(p.id,month,metric.id),id="entry-"+row+"-"+col;
+  return `<td><label class="sr-only" for="${id}">${escapeHTML(metric.name)}، ${escapeHTML(p.name||p.year)}، ${MONTHS[month-1]}</label><input id="${id}" type="number" min="0" step="any" data-entry="${escapeHTML(key)}" placeholder="—" value="${escapeHTML(report.entries[key]??"")}"></td>`;
+ }).join("")}</tr>`).join("");
+ $("dataEditors").innerHTML=`<div class="metric-tabs" role="group" aria-label="اختر مؤشرًا لإدخال قيمه">
+ ${base.map(m=>`<button type="button" class="metric-tab ${m.id===metric.id?"active":""}" data-metric-tab="${escapeHTML(m.id)}" aria-pressed="${m.id===metric.id}">${escapeHTML(m.name)}</button>`).join("")}
+ </div><p class="hint">القيم المعروضة للمؤشر: <strong>${escapeHTML(metric.name)}</strong> · ${escapeHTML(metric.unit)}. الخانة الفارغة تعني عدم توفر بيانات، وليست صفرًا.</p>
+ <div class="entry-table-wrap"><table class="entry-table"><thead><tr><th scope="col">الشهر</th>${head}</tr></thead><tbody>${cells}</tbody></table></div>`;
 }
 function draw(){
  $("previewTitle").textContent=report.title.trim()||"تقرير جديد";
@@ -192,6 +204,7 @@ $("periodEditors").addEventListener("click",e=>{
  for(const k of Object.keys(report.entries)){try{if(JSON.parse(k)[0]===id)delete report.entries[k];}catch{}}
  rerender();
 });
+$("dataEditors").addEventListener("click",e=>{const tab=e.target.closest("[data-metric-tab]");if(tab){selectedDataMetricId=tab.dataset.metricTab;renderData();}});
 $("dataEditors").addEventListener("input",e=>{
  if(!e.target.dataset.entry)return;
  const raw=e.target.value;
