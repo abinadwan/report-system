@@ -40,9 +40,19 @@ function draw(){
  $("chartSection").hidden=!report.sections.includes("chart");
  $("tableSection").hidden=!report.sections.includes("table");
  $("summaryCards").innerHTML=sections.flatMap(s=>s.periods.map((p,i)=>`<div class="metric"><small>${escapeHTML(s.metric.name)} · ${escapeHTML(p.name||p.year)}</small><strong>${format(p.result)}</strong><small>${escapeHTML(s.metric.unit)} · ${p.count}/${p.expected} أشهر</small></div>`)).join("");
- $("charts").innerHTML=sections.map(s=>{
- const max=Math.max(0,...s.periods.map(p=>p.result??0));
- return `<div class="chart-group"><h4>${escapeHTML(s.metric.name)} <small>${escapeHTML(s.metric.unit)}</small></h4>${s.periods.map(p=>`<div class="bar-row"><span>${escapeHTML(p.name||p.year)}</span><div class="bar-track"><div class="bar-fill" style="width:${max>0&&p.result!==null?(100*p.result/max).toFixed(2):0}%"></div></div><strong>${format(p.result)}</strong></div>`).join("")}</div>`;
+ const lead=sections[0];
+ const leadRows=lead?comparison(lead.periods):[];
+ const complete=leadRows.filter(p=>p.result!==null);
+ const best=complete.length?complete.reduce((a,b)=>a.result>=b.result?a:b):null;
+ $("narrative").textContent=best?
+   "يتناول التقرير "+report.periods.length+" فترة و"+report.metrics.length+" مؤشرًا. أعلى نتيجة لمؤشر "+lead.metric.name+" كانت "+format(best.result)+" "+lead.metric.unit+" خلال "+(best.name||best.year)+". النتائج وصفية ولا تشير وحدها إلى جودة الأداء.":
+   "لا تتوفر بيانات كافية لصياغة ملخص رقمي. أدخل القيم الشهرية أولًا.";
+ $("charts").innerHTML=sections.map(section=>{
+ const monthly=report.kind==="trend"||report.kind==="periodic";
+ const values=monthly?section.periods.flatMap(p=>p.values.map(e=>e.value)):section.periods.map(p=>p.result);
+ const max=Math.max(0,...values.filter(v=>v!==null));
+ const rows=monthly?section.periods.flatMap(p=>p.values.map(e=>({label:(p.name||p.year)+" · "+MONTHS[e.month-1],value:e.value}))):section.periods.map(p=>({label:p.name||p.year,value:p.result}));
+ return `<div class="chart-group"><h4>${escapeHTML(section.metric.name)} <small>${escapeHTML(section.metric.unit)}</small></h4>${rows.map(row=>`<div class="bar-row"><span>${escapeHTML(row.label)}</span><div class="bar-track"><div class="bar-fill" style="width:${max>0&&row.value!==null?(100*row.value/max).toFixed(2):0}%"></div></div><strong>${format(row.value)}</strong></div>`).join("")}</div>`;
  }).join("");
  $("tables").innerHTML=sections.map(s=>`<h4>${escapeHTML(s.metric.name)} <small>${escapeHTML(s.metric.unit)}</small></h4><div class="table-scroll"><table><thead><tr><th>الفترة</th><th>النتيجة</th><th>متوسط الشهر</th><th>التغير عن الأولى</th><th>تغطية البيانات</th></tr></thead><tbody>
  ${comparison(s.periods).map(p=>`<tr><td>${escapeHTML(p.name||p.year)}</td><td>${format(p.result)}</td><td>${format(p.average)}</td><td>${p.delta===null?"—":(p.delta>0?"+":"")+format(p.delta)+"%"}</td><td>${p.count}/${p.expected}</td></tr>`).join("")}
