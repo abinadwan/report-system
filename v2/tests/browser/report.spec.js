@@ -93,3 +93,13 @@ test("legacy report migration preserves V1 and creates V2 report",async ({page})
  const original=await page.evaluate(()=>JSON.parse(localStorage.getItem("report_builder_reports_v3")));
  expect(original[0].id).toBe("original");
 });
+
+test("report sections can be reordered and saved",async ({page})=>{
+ const rows=page.locator("#sectionOrder .section-order-row");
+ await expect(rows).toHaveCount(3);
+ await rows.nth(1).locator('[data-move="-1"]').click();
+ await expect(rows.first()).toHaveAttribute("data-section-id","chart");
+ await page.locator("#save").click();
+ await page.reload();
+ await expect(rows.first()).toHaveAttribute("data-section-id","chart");
+});
