@@ -1,6 +1,7 @@
 import {MONTHS,PRESETS,TEMPLATES,uid,metric,period,newReport,applyTemplate,validate,calc,comparison,format,keyOf} from "./engine.js";
 import {parseCSV,readFlexibleFormat,encodeCSV} from "./csv.js";
 import {writeDraft,readDraft} from "./storage.js";
+import {readXLSX} from "./xlsx.js";
 const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 const KEY="report-system-v2-v3-draft";
@@ -141,8 +142,8 @@ $("downloadCsv").onclick=()=>{
 $("importCsv").onchange=async e=>{
  const file=e.target.files?.[0];e.target.value="";if(!file)return;
  try{
-  if(file.size>4*1024*1024)throw Error("حجم CSV يتجاوز 4 ميجابايت.");
-  const data=readFlexibleFormat(parseCSV(await file.text()));
+  if(file.size>8*1024*1024)throw Error("حجم الملف يتجاوز 8 ميجابايت.");
+  const data=readFlexibleFormat(file.name.toLowerCase().endsWith(".xlsx")?await readXLSX(await file.arrayBuffer()):parseCSV(await file.text()));
   const seen=new Set();for(const r of data){const k=JSON.stringify([r.period,r.year,r.month,r.metric]);if(seen.has(k))throw Error("صف مكرر لنفس السنة والشهر والمؤشر.");seen.add(k);}
   const keys=[...new Set(data.map(r=>JSON.stringify([r.period,r.year])))];
   const names=[...new Set(data.map(r=>r.metric))];
@@ -154,7 +155,7 @@ $("importCsv").onchange=async e=>{
   for(const r of data){const p=periods.find(p=>p.year===r.year&&p.name===r.period),m=metrics.find(m=>m.name===r.metric);entries[keyOf(p.id,r.month,m.id)]=r.value;}
   const next={...report,periods,metrics,entries};
   validate(next);report=next;rerender();status("استوردت "+data.length+" قيمة.");
- }catch(err){status("تعذر استيراد CSV: "+err.message);}
+ }catch(err){status("تعذر استيراد البيانات: "+err.message);}
 };
 $("save").onclick=saveDraft;
 $("backup").onclick=()=>{try{validate(report);download("report-system-v2.json",JSON.stringify(report,null,2),"application/json");}catch(e){status(e.message);}};
