@@ -7,7 +7,7 @@ import {locale,setLocale,startLocalization,translateText} from "./i18n.js";
 const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 function blankReport(){
- const result=blankReport();
+ const result=newReport();
  if(locale()==="en"){result.title="New performance report";result.metrics[0].name="Transactions";result.metrics[0].unit="transaction";}
  return result;
 }
