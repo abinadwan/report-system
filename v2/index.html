@@ -9,7 +9,7 @@
 <main class="shell">
 <section class="workspace" aria-label="محرر التقرير">
   <div class="section-head"><h1>إنشاء تقرير</h1><span class="eyebrow">HTML + JavaScript</span></div>
-  <label for="title">اسم التقرير</label><input id="title" maxlength="250">
+  <section class="editor-section report-library"><div class="section-head"><h2>تقاريري</h2><span class="eyebrow">محفوظة على هذا الجهاز</span></div><label for="reportSelect">اختر تقريرًا</label><select id="reportSelect"></select><div class="actions"><button type="button" id="newReport" class="btn secondary">تقرير جديد</button><button type="button" id="duplicateReport" class="btn secondary">نسخ</button><button type="button" id="deleteReport" class="btn ghost">حذف</button><button type="button" id="backupAll" class="btn secondary">نسخ احتياطي للكل</button></div></section><label for="title">اسم التقرير</label><input id="title" maxlength="250">
   <div class="two-cols">
     <div><label for="kind">الهدف</label><select id="kind"><option value="comparison">مقارنة أداء</option><option value="periodic">تقرير دوري</option><option value="trend">تحليل الاتجاهات</option><option value="executive">ملخص تنفيذي</option></select></div>
     <div><label for="template">القالب</label><select id="template"><option value="general">تقرير عام</option><option value="call-center">مركز الاتصال</option><option value="projects">المشاريع</option><option value="sales">المبيعات</option></select></div>
