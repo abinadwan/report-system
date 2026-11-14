@@ -1,0 +1,55 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {newReport,period,metric,calc,validate,comparison,keyOf,PRESETS,applyTemplate} from "../js/engine.js";
+import {parseCSV,readLongFormat,encodeCSV} from "../js/csv.js";
+
+test("three-year, two-metric comparison",()=>{
+ const r=newReport();
+ r.periods=[2024,2025,2026].map(year=>({...period(year),id:String(year),months:[1,2,3]}));
+ r.metrics=[{...metric("Calls","calls","sum"),id:"calls"},{...metric("Duration","s","average"),id:"duration"}];
+ for(const [i,p] of r.periods.entries())for(const month of p.months){
+  r.entries[keyOf(p.id,month,"calls")]=(i+1)*10;
+  r.entries[keyOf(p.id,month,"duration")]=month*5;
+ }
+ const result=calc(r);
+ assert.deepEqual(result[0].periods.map(p=>p.result),[30,60,90]);
+ assert.deepEqual(result[1].periods.map(p=>p.result),[10,10,10]);
+ assert.equal(comparison(result[0].periods)[2].delta,200);
+});
+test("half-year comparisons and missing month",()=>{
+ const r=newReport();r.periods=[{...period(2025),id:"h1",months:PRESETS.h1},{...period(2026),id:"h2",months:PRESETS.h2}];
+ const m=r.metrics[0];
+ for(const month of PRESETS.h1)r.entries[keyOf("h1",month,m.id)]=10;
+ for(const month of PRESETS.h2.slice(0,5))r.entries[keyOf("h2",month,m.id)]=20;
+ const [a,b]=calc(r)[0].periods;
+ assert.equal(a.result,60);assert.equal(a.complete,true);
+ assert.equal(b.result,100);assert.equal(b.complete,false);assert.equal(b.count,5);
+});
+test("reject invalid input and schema",()=>{
+ const r=newReport();r.periods[0].months=[1,1];
+ assert.throws(()=>validate(r),/أشهر/);
+ r.periods[0].months=[1];
+ r.entries[keyOf(r.periods[0].id,1,r.metrics[0].id)]=-1;
+ assert.throws(()=>validate(r),/قيمة/);
+ assert.throws(()=>validate({...r,schemaVersion:2}),/صيغة/);
+});
+test("template changes create independent metric IDs",()=>{
+ const r=applyTemplate(newReport(),"call-center");
+ assert.equal(r.metrics.length,2);
+ assert.notEqual(r.metrics[0].id,r.metrics[1].id);
+ assert.equal(Object.keys(r.entries).length,0);
+});
+test("CSV with quoted comma and newline parses safely",()=>{
+ const rows=parseCSV('year,month,metric,value\r\n2026,1,"Calls, total",2\r\n2026,2,Duration,5');
+ assert.equal(readLongFormat(rows)[0].metric,"Calls, total");
+ assert.equal(readLongFormat(rows)[1].month,2);
+});
+test("CSV named periods keep overlapping years distinct",()=>{
+ const rows=[{period:"H1 2026",year:2026,month:1,metric:"Calls",value:10},{period:"Q1 2026",year:2026,month:1,metric:"Calls",value:20}];
+ const parsed=readLongFormat(parseCSV(encodeCSV(rows)));
+ assert.deepEqual(parsed,rows);
+});
+test("CSV rejects invalid numeric values",()=>{
+ assert.throws(()=>readLongFormat(parseCSV("year,month,metric,value\n2026,1,Calls,-1")),/القيمة/);
+ assert.throws(()=>parseCSV('year,month,metric,value\n"2026,1,Calls,30'),/مغلق/);
+});
