@@ -14,9 +14,10 @@ export function validateReport(report){
  if(report.periods.length>100)throw new Error("عدد الفترات كبير جدًا.");
  if(!["sum","average"].includes(report.metric?.aggregation))throw new Error("طريقة حساب غير معروفة.");
  if(!TEMPLATES[report.template] || !["comparison","periodic","trend","executive"].includes(report.type))throw new Error("نوع التقرير أو القالب غير معروف.");
+ if(typeof report.title!=="string"||!report.metric||typeof report.metric.name!=="string"||typeof report.metric.unit!=="string")throw new Error("تعريف التقرير أو المؤشر غير صالح.");
  const ids=new Set();
  for(const p of report.periods){
-  if(typeof p.id!=="string"||ids.has(p.id))throw new Error("معرّفات الفترات غير صالحة.");ids.add(p.id);
+  if(typeof p.id!=="string"||typeof p.name!=="string"||!p.values||typeof p.values!=="object"||ids.has(p.id))throw new Error("معرّفات الفترات غير صالحة.");ids.add(p.id);
   if(!validYear(p.year))throw new Error("الرجاء إدخال سنة صحيحة من أربعة أرقام.");
   if(!Array.isArray(p.months)||!p.months.length||new Set(p.months).size!==p.months.length||p.months.some(m=>!Number.isInteger(m)||m<1||m>12))throw new Error("اختر أشهرًا صحيحة لكل فترة.");
   for(const m of p.months){const value=p.values?.[m];if(value!==""&&value!=null&&(!Number.isFinite(Number(value))||Number(value)<0))throw new Error("القيم يجب أن تكون أرقامًا غير سالبة.");}
