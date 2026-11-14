@@ -2,6 +2,7 @@ import {MONTHS,PRESETS,TEMPLATES,uid,metric,period,newReport,applyTemplate,valid
 import {parseCSV,readFlexibleFormat,encodeCSV} from "./csv.js";
 import {writeDraft,readDraft} from "./storage.js";
 import {readXLSX} from "./xlsx.js";
+import {migrateLegacyReports} from "./migrate.js";
 const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 const KEY="report-system-v2-v3-draft";
@@ -177,6 +178,18 @@ $("duplicateReport").onclick=()=>{if(library.length>=100)return status("الحد
 $("deleteReport").onclick=()=>{if(!confirm("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);library=library.filter(r=>r.id!==report.id);if(!library.length){report=newReport();report.id=uid();library=[report];}else report=library[0];rerender();};
 $("reportSelect").onchange=e=>{const selectedId=e.target.value;saveDraft();const selected=library.find(r=>r.id===selectedId);if(selected){report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();}};
 $("backupAll").onclick=()=>{try{library.forEach(validate);download("report-system-v2-library.json",JSON.stringify({schemaVersion:3,reports:library},null,2),"application/json");}catch(e){status(e.message);}};
+$("migrateV1").onclick=()=>{
+ try{
+  const old=JSON.parse(localStorage.getItem("report_builder_reports_v3")||"[]");
+  if(!Array.isArray(old)||!old.length)return status("لا توجد تقارير V1 محفوظة في هذا المتصفح.");
+  const existing=new Set(library.map(r=>r.legacyId).filter(Boolean));
+  const migrated=migrateLegacyReports(old).filter(r=>!r.legacyId||!existing.has(r.legacyId));
+  if(!migrated.length)return status("جميع التقارير القديمة موجودة بالفعل.");
+  if(library.length+migrated.length>100)return status("تجاوزت التقارير الحد الأقصى للمكتبة.");
+  if(!confirm("استيراد "+migrated.length+" تقريرًا من V1؟ ستظل بيانات V1 الأصلية دون تعديل."))return;
+  saveDraft();library.push(...migrated);report=migrated[0];rerender();status("تم ترحيل "+migrated.length+" تقريرًا. احتفظ بنسخة احتياطية.");
+ }catch(e){status("تعذر ترحيل V1: "+e.message);}
+};
 $("print").onclick=()=>{try{validate(report);window.print();}catch(e){status(e.message);}};
 syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();
 if(!localStorage.getItem(KEY)){
