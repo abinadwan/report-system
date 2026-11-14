@@ -15,9 +15,10 @@ export function parseCSV(text){
  if(rows.length<2)throw Error("ملف CSV لا يحتوي على صف بيانات.");
  const headers=rows.shift().map(x=>x.trim());
  if(new Set(headers).size!==headers.length)throw Error("أسماء أعمدة مكررة.");
+ if(rows.length>36000)throw Error("ملف CSV يتجاوز حد 36000 صف.");
  return rows.map((r,i)=>{if(r.length!==headers.length)throw Error("اختلاف عدد الأعمدة في الصف "+(i+2));return Object.fromEntries(headers.map((h,j)=>[h,r[j].trim()]));});
 }
-export const EXAMPLE_HEADER="year,month,metric,value";
+export const EXAMPLE_HEADER="period,year,month,metric,value";
 export function readLongFormat(rows){
  // Enforced explicit, documented schema avoids silently guessing user columns.
  if(!rows.length)throw Error("لا توجد صفوف.");
@@ -26,7 +27,7 @@ export function readLongFormat(rows){
   const year=Number(r.year),month=Number(r.month);
   if(!/^\d{4}$/.test(r.year)||year<1000||!Number.isInteger(month)||month<1||month>12||!r.metric.trim())throw Error("السنة أو الشهر أو اسم المؤشر غير صالح في الصف "+(i+2));
   if(r.value===""||!Number.isFinite(Number(r.value))||Number(r.value)<0)throw Error("القيمة غير صالحة في الصف "+(i+2));
-  return {year,month,metric:r.metric.trim(),value:Number(r.value)};
+  return {period:(r.period||String(year)).trim(),year,month,metric:r.metric.trim(),value:Number(r.value)};
  });
 }
 export function encodeCSV(rows){
