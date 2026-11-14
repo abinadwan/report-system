@@ -2,22 +2,33 @@
 <html lang="ar" dir="rtl">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report System — التقارير</title><link rel="stylesheet" href="./styles.css"></head>
 <body>
-<header class="topbar"><div><strong>Report System <span>2.1</span></strong><small>منصة التقارير المرنة</small></div>
-<nav class="main-nav" aria-label="التنقل الرئيسي">
-<button type="button" class="nav-tab" id="nav-library" data-view="library">تقاريري</button>
-<button type="button" class="nav-tab" id="nav-data" data-view="data">إدخال البيانات</button>
-<button type="button" class="nav-tab" id="nav-preview" data-view="preview">عرض التقرير</button>
-</nav></header>
+<header class="topbar">
+  <div class="brand-lockup">
+    <img src="./assets/report-system-mark.svg" alt="شعار Report System" width="54" height="54" class="brand-symbol">
+    <div class="brand-copy"><strong>Report <span>System</span></strong><small>منصة التقارير المرنة</small></div>
+  </div>
+  <div class="header-tools">
+    <nav class="main-nav" aria-label="التنقل الرئيسي">
+      <button type="button" class="nav-tab" id="nav-library" data-view="library">تقاريري</button>
+      <button type="button" class="nav-tab" id="nav-data" data-view="data">إدخال البيانات</button>
+      <button type="button" class="nav-tab" id="nav-preview" data-view="preview">عرض التقرير</button>
+    </nav>
+    <button id="languageToggle" type="button" class="locale-switch" aria-label="اللغة" title="اللغة">
+      <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c6 6 6 12 0 18M12 3c-6 6-6 12 0 18"/></svg>
+      <span data-lang-label>English</span>
+    </button>
+  </div>
+</header>
 <main class="app-shell">
 <section class="app-view" id="view-library" aria-labelledby="library-heading">
-<div class="view-heading"><div><h1 id="library-heading">تقاريري</h1><p>أنشئ تقريرًا أو افتح أحد تقاريرك السابقة</p></div><button class="btn primary" type="button" id="startNewReport">+ إنشاء تقرير</button></div>
+<div class="view-heading"><div><p class="view-eyebrow">Report System / Workspace</p><h1 id="library-heading">تقاريري</h1><p>أنشئ تقريرًا أو افتح أحد تقاريرك السابقة</p></div><button class="btn primary" type="button" id="startNewReport">+ إنشاء تقرير</button></div>
   <section class="report-library"><div class="section-head"><h2>تقاريري</h2><span class="eyebrow">محفوظة على هذا الجهاز</span></div><label for="reportSelect">اختر تقريرًا</label><select id="reportSelect"></select><div class="actions"><button type="button" id="newReport" class="btn secondary">تقرير جديد</button><button type="button" id="duplicateReport" class="btn secondary">نسخ</button><button type="button" id="deleteReport" class="btn ghost">حذف</button><button type="button" id="backupAll" class="btn secondary">نسخ احتياطي للكل</button><label class="btn secondary file-button">استعادة المكتبة<input type="file" id="restoreAll" accept=".json,application/json" hidden></label></div></section>
 <p id="libraryStatus" role="status" aria-live="polite" class="hint"></p>
 <div id="reportCards" class="report-card-grid" aria-label="التقارير المحفوظة"></div>
-<p class="hint">التقارير محفوظة على هذا الجهاز. احتفظ بنسخة JSON احتياطية.</p>
+<p class="hint privacy-note"><span class="privacy-mark" aria-hidden="true">●</span> التقارير محفوظة على هذا الجهاز. احتفظ بنسخة JSON احتياطية.</p>
 </section>
 <section class="app-view" id="view-data" aria-labelledby="data-heading" hidden>
-<div class="view-heading"><div><h1 id="data-heading">إدخال البيانات</h1><p>حدد الهدف والفترات والمؤشرات، ثم أدخل البيانات أو استوردها.</p></div><button type="button" class="btn primary" id="continuePreview">عرض المؤشرات ←</button></div>
+<div class="view-heading"><div><p class="view-eyebrow">Report System / Editor</p><h1 id="data-heading">إدخال البيانات</h1><p>حدد الهدف والفترات والمؤشرات، ثم أدخل البيانات أو استوردها.</p></div><button type="button" class="btn primary" id="continuePreview">عرض المؤشرات ←</button></div>
 <div class="workspace data-workspace">
 <label for="title">اسم التقرير</label><input id="title" maxlength="250">
   <div class="two-cols">
@@ -45,18 +56,20 @@
 <div class="bottom-actions"><button type="button" class="btn secondary" id="backLibrary">العودة لتقاريري</button><button type="button" class="btn primary" id="continuePreviewBottom">عرض المؤشرات ←</button></div>
 </section>
 <section class="app-view" id="view-preview" aria-labelledby="preview-heading" hidden>
-<div class="view-heading"><div><h1 id="preview-heading">عرض المؤشرات</h1><p>راجع النتائج وملاحظات اكتمال البيانات قبل طباعة التقرير.</p></div><button type="button" class="btn secondary" id="backToData">تعديل البيانات</button></div>
+<div class="view-heading"><div><p class="view-eyebrow">Report System / Insights</p><h1 id="preview-heading">عرض المؤشرات</h1><p>راجع النتائج وملاحظات اكتمال البيانات قبل طباعة التقرير.</p></div><button type="button" class="btn secondary" id="backToData">تعديل البيانات</button></div>
 <div class="preview-wrap">
   <article id="preview" class="preview">
-    <div class="preview-header"><span>تقرير تحليلي</span><h2 id="previewTitle"></h2><p id="previewSubtitle"></p></div>
+    <div class="preview-header"><span>تقرير تحليلي</span><h2 id="previewTitle" data-no-i18n></h2><p id="previewSubtitle"></p></div>
     <div id="summarySection" class="preview-section"><h3>ملخص الأداء</h3><div id="summaryCards" class="metrics"></div><p id="narrative" class="report-narrative"></p></div>
     <div id="chartSection" class="preview-section"><h3>مقارنة المؤشرات</h3><div id="charts"></div></div>
     <div id="tableSection" class="preview-section"><h3>تفاصيل المقارنة</h3><div id="tables"></div></div>
     <p id="warnings" class="notice"></p>
-    <footer>Report System 2.0 · المؤشرات محسوبة من بيانات المستخدم</footer>
+    <footer class="report-print-footer">Report System · المؤشرات محسوبة من بيانات المستخدم · © 2026</footer>
   </article>
   <button type="button" id="print" class="btn primary print-button">طباعة / حفظ PDF</button>
 
 </div></section>
-</main><script type="module" src="./js/app-v3.js"></script>
+</main>
+<footer class="site-footer"><div class="site-footer-inner"><div class="footer-identity"><img src="./assets/report-system-mark.svg" alt="شعار Report System" width="30" height="30"><div><strong>Report System</strong><p>منصة تقارير تعمل محليًا وتحترم خصوصية البيانات.</p></div></div><div class="footer-legal"><span>© 2026 المساهمون في Report System. متاح بموجب رخصة MIT.</span><a href="./LICENSE" target="_blank" rel="noopener noreferrer">رخصة MIT</a><a href="https://github.com/abinadwan/report-system" target="_blank" rel="noopener noreferrer">GitHub</a></div></div></footer>
+<script type="module" src="./js/app-v3.js"></script>
 </body></html>

@@ -94,4 +94,4 @@ export function comparison(rows){
    return {...row,delta,comparable};
  });
 }
-export function format(n){return n===null||n===undefined?"—":new Intl.NumberFormat("ar-SA",{maximumFractionDigits:2}).format(n);}
+export function format(n){return n===null||n===undefined?"—":new Intl.NumberFormat(typeof document!=="undefined"&&document.documentElement.lang==="en"?"en-US":"ar-SA",{maximumFractionDigits:2}).format(n);}

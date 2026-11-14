@@ -1,14 +1,16 @@
 {
   "name": "report-system-v2",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.2.0",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check js/engine.js && node --check js/csv.js && node --check js/xlsx.js && node --check js/app-v3.js && node --check js/library-backup.js",
+    "check": "node --check js/engine.js && node --check js/csv.js && node --check js/xlsx.js && node --check js/app-v3.js && node --check js/library-backup.js && node --check js/i18n.js",
     "test:browser": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0"
-  }
+  },
+  "license": "MIT",
+  "description": "Bilingual local-first report builder with customizable periods and metrics"
 }

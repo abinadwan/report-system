@@ -195,3 +195,64 @@ test("invalid library backup does not replace existing reports",async ({page})=>
  await expect(page.locator("#libraryStatus")).toContainText("فشلت الاستعادة");
  await expect(page.locator("#reportCards")).toContainText("يبقى محفوظًا");
 });
+
+test("brand header displays original logo, footer and MIT license",async ({page})=>{
+ await expect(page.locator(".brand-lockup img")).toHaveAttribute("src","./assets/report-system-mark.svg");
+ const response=await page.request.get("/assets/report-system-mark.svg");
+ expect(response.ok()).toBeTruthy();
+ expect(await response.text()).toContain("<svg");
+ await expect(page.locator(".site-footer")).toContainText("MIT");
+ const license=await page.request.get("/LICENSE");
+ expect(license.ok()).toBeTruthy();
+ expect(await license.text()).toContain("MIT License");
+});
+
+test("switches Arabic and English with matching text direction without losing data",async ({page})=>{
+ await expect(page.locator("html")).toHaveAttribute("lang","ar");
+ await expect(page.locator("html")).toHaveAttribute("dir","rtl");
+ const originalTitle="تقرير المستخدم 2026";
+ await page.locator("#title").fill(originalTitle);
+ await page.locator("#dataEditors [data-entry]").first().fill("42");
+ await page.locator("#save").click();
+ await page.locator("#languageToggle").click();
+ await expect(page.locator("html")).toHaveAttribute("lang","en");
+ await expect(page.locator("html")).toHaveAttribute("dir","ltr");
+ await expect(page.locator("#nav-data")).toHaveText("Data entry");
+ await expect(page.locator("#data-heading")).toHaveText("Data entry");
+ await expect(page.locator("#nav-library")).toHaveText("My reports");
+ await expect(page.locator("#languageToggle")).toContainText("العربية");
+ await expect(page.locator("#title")).toHaveValue(originalTitle);
+ await expect(page.locator("#dataEditors [data-entry]").first()).toHaveValue("42");
+ await expect(page.locator("#dataEditors")).toContainText("January");
+ await page.locator("#continuePreview").click();
+ await expect(page.locator("#preview-heading")).toHaveText("View insights");
+ await expect(page.locator("#previewTitle")).toHaveText(originalTitle);
+ await page.reload();
+ await expect(page.locator("html")).toHaveAttribute("lang","en");
+ await expect(page.locator("#nav-library")).toHaveText("My reports");
+ await page.locator("#languageToggle").click();
+ await expect(page.locator("html")).toHaveAttribute("dir","rtl");
+ await expect(page.locator("#nav-library")).toHaveText("تقاريري");
+ await expect(page.locator("#title")).toHaveValue(originalTitle);
+});
+
+test("English confirmation and status messages are localized",async ({page})=>{
+ await page.locator("#languageToggle").click();
+ await page.locator("#save").click();
+ await expect(page.locator("#status")).toContainText("Saved to this browser");
+ let dialogText="";
+ page.once("dialog",async dialog=>{dialogText=dialog.message();await dialog.dismiss();});
+ await page.locator("#clear").click();
+ expect(dialogText).toMatch(/Reset this report/);
+});
+
+test("English is responsive on small screens and direction returns to Arabic",async ({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.locator("#languageToggle").click();
+ await expect(page.locator(".brand-lockup img")).toBeVisible();
+ await expect(page.locator("#nav-library")).toBeVisible();
+ await expect(page.locator("#nav-preview")).toBeVisible();
+ await expect(page.locator(".site-footer")).toBeVisible();
+ await page.locator("#languageToggle").click();
+ await expect(page.locator("html")).toHaveAttribute("dir","rtl");
+});
