@@ -15,7 +15,7 @@ Then visit `http://localhost:5500/v2/` in a modern browser.
 ## Available features
 
 - Report intent: periodic, comparison, trends or executive. Periodic/trend modes display month-level bars; other modes compare period aggregates. Advanced layouts remain on the roadmap.
-- General, call center, project and sales starter metric presets. Selecting another preset explicitly clears existing metric values.
+- General, call center, project and sales starter metric presets, including a weighted answer-rate ratio for the call-center preset. Selecting another preset explicitly clears existing metric values.
 - Add, edit or delete up to 30 metrics per report. Each metric can calculate sum or average of **observed months**.
 - Any four-digit year and up to 100 named periods, with annual, half-year, quarterly or custom month selection. Overlapping periods are supported.
 - Manual monthly values, missing-data warnings, multi-metric totals and comparison percentages against the first period.
@@ -26,13 +26,13 @@ Then visit `http://localhost:5500/v2/` in a modern browser.
 
 ## Limitations and caveats
 
-- Only sum and unweighted observed-month average are currently supported. **Do not use the average method for weighted operational rates.**
+- Supports sum, unweighted observed-month average, and ratio KPIs derived from matching numerator/denominator monthly values. **Do not use simple average for weighted operational rates.**
 - CSV import replaces the current periods and data after confirmation. Export only includes entered values, not blank months.
 - Native `.xlsx` import reads the **first worksheet** with standard shared/inline strings and numeric values, subject to ZIP and sheet-size limits. Some uncommon Excel formats may require saving as CSV.
 - Drafts are saved to `localStorage` and mirrored to IndexedDB where available; backup JSON remains recommended. Another browser or origin does not share them.
 - Current PDF uses browser print and is not visually certified across browsers.
 - GitHub Actions runs engine, CSV and Chromium browser regression tests; accessibility and multi-browser audits are not complete.
-- V1 reports are not automatically migrated. V1 data remains untouched.
+- V1 reports can be migrated **on demand** using “استيراد تقارير V1” when both apps share an origin. Original V1 browser data remains untouched; legacy rate KPI metadata is preserved, not falsely recomputed.
 - The app is designed for nonnegative measures; rates, negative financial values and computed metrics need additional metric types.
 
 ## Testing
