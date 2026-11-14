@@ -2,6 +2,16 @@
 const LANGUAGE_KEY="report-system-language";
 const WORDS={
 "منصة التقارير المرنة":"Flexible reporting workspace",
+"يتناول التقرير":"This report covers",
+"أعلى نتيجة لمؤشر":"The highest result for",
+"فترة و":"periods and",
+"فترة و":"periods and",
+"مؤشرًا.":"metrics.",
+"تقريرًا.":"reports.",
+"نتيجة":"result",
+"البيانات":"data",
+"مؤشرًا":"metrics",
+"الفترة":"Period",
 "تقاريري":"My reports",
 "إدخال البيانات":"Data entry",
 "عرض التقرير":"Report preview",
@@ -258,6 +268,21 @@ export function setLocale(next){
 }
 export function startLocalization(){
  applyLocale();
- const observer=new MutationObserver(()=>applyLocale());
+ const observer=new MutationObserver(records=>{
+  if(translating)return;
+  translating=true;
+  for(const item of records){
+   if(item.type==="characterData"){
+    if(item.target.parentElement?.closest("[data-no-i18n],script,style,noscript,textarea,code"))continue;
+    translateNode(item.target);
+   }else if(item.type==="attributes"){
+    if(!item.target.closest("[data-no-i18n]"))translateAttribute(item.target,item.attributeName);
+   }else for(const child of item.addedNodes){
+    if(child.parentElement?.closest("[data-no-i18n]"))continue;
+    translateSubtree(child);
+   }
+  }
+  translating=false;
+ });
  observer.observe(document.body,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:["placeholder","aria-label","title","alt"]});
 }
