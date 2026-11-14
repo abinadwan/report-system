@@ -58,7 +58,7 @@ function newReportAndOpen(){
   saveDraft();report=newReport();report.id=uid();library.push(report);rerender();showView("data");
 }
 function restoreDraft(){try{const v=JSON.parse(localStorage.getItem(KEY));return validate(v);}catch{return newReport();}}
-function status(text){$("status").textContent=text;}
+function status(text){$("status").textContent=text;$("libraryStatus").textContent=text;}
 function saveDraft(){
  try{validate(report);}catch(e){status("راجع البيانات قبل الحفظ: "+e.message);return false;}
  const idx=library.findIndex(r=>r.id===report.id);if(idx<0)library.push(report);else library[idx]=report;
@@ -256,6 +256,23 @@ $("duplicateReport").onclick=()=>{if(library.length>=100)return status("الحد
 $("deleteReport").onclick=()=>{if(!confirm("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);const deletedId=report.id;library=library.filter(r=>r.id!==deletedId);try{localStorage.removeItem("report-system-v2-record:"+deletedId);}catch{}if(!library.length){report=newReport();report.id=uid();library=[report];}else report=library[0];rerender();};
 $("reportSelect").onchange=e=>{const selectedId=e.target.value;saveDraft();const selected=library.find(r=>r.id===selectedId);if(selected){report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();}};
 $("backupAll").onclick=()=>{try{library.forEach(validate);download("report-system-v2-library.json",JSON.stringify({schemaVersion:3,reports:library},null,2),"application/json");}catch(e){status(e.message);}};
+$("restoreAll").onchange=async e=>{
+ const file=e.target.files?.[0];e.target.value="";if(!file)return;
+ try{
+  if(file.size>8*1024*1024)throw Error("النسخة الاحتياطية أكبر من 8 ميجابايت.");
+  const backup=JSON.parse(await file.text());
+  if(backup?.schemaVersion!==3||!Array.isArray(backup.reports)||!backup.reports.length||backup.reports.length>100)throw Error("ملف المكتبة غير صالح.");
+  const ids=new Set();
+  const restored=backup.reports.map(item=>{
+   validate(item);
+   if(typeof item.id!=="string"||!item.id||ids.has(item.id))throw Error("معرّفات التقارير غير صالحة أو مكررة.");
+   ids.add(item.id);return item;
+  });
+  if(!confirm("استعادة "+restored.length+" تقريرًا ستستبدل مكتبتك الحالية بالكامل. هل تريد المتابعة؟"))return;
+  library=restored;report=library[0];rerender();saveDraft();showView("library");
+  status("تم استعادة "+library.length+" تقريرًا. احتفظ بنسخة احتياطية.");
+ }catch(err){status("تعذر استعادة المكتبة: "+err.message);}
+};
 $("migrateV1").onclick=()=>{
  try{
   const old=JSON.parse(localStorage.getItem("report_builder_reports_v3")||"[]");
