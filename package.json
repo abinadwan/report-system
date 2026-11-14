@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check js/engine.js && node --check js/csv.js && node --check js/xlsx.js && node --check js/app-v3.js && node --check js/migrate.js",
+    "check": "node --check js/engine.js && node --check js/csv.js && node --check js/xlsx.js && node --check js/app-v3.js && node --check js/library-backup.js",
     "test:browser": "playwright test"
   },
   "devDependencies": {
