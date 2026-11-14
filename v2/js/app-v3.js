@@ -1,5 +1,5 @@
 import {MONTHS,PRESETS,TEMPLATES,uid,metric,period,newReport,applyTemplate,validate,calc,comparison,format,keyOf} from "./engine.js";
-import {parseCSV,readLongFormat,encodeCSV} from "./csv.js";
+import {parseCSV,readFlexibleFormat,encodeCSV} from "./csv.js";
 import {writeDraft,readDraft} from "./storage.js";
 const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
@@ -136,7 +136,7 @@ $("importCsv").onchange=async e=>{
  const file=e.target.files?.[0];e.target.value="";if(!file)return;
  try{
   if(file.size>4*1024*1024)throw Error("حجم CSV يتجاوز 4 ميجابايت.");
-  const data=readLongFormat(parseCSV(await file.text()));
+  const data=readFlexibleFormat(parseCSV(await file.text()));
   const seen=new Set();for(const r of data){const k=JSON.stringify([r.period,r.year,r.month,r.metric]);if(seen.has(k))throw Error("صف مكرر لنفس السنة والشهر والمؤشر.");seen.add(k);}
   const keys=[...new Set(data.map(r=>JSON.stringify([r.period,r.year])))];
   const names=[...new Set(data.map(r=>r.metric))];
