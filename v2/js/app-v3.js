@@ -22,11 +22,16 @@ function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveDraft,6
 function syncTop(){$("title").value=report.title;$("kind").value=report.kind;$("template").value=report.template;document.querySelectorAll("[data-section]").forEach(el=>el.checked=report.sections.includes(el.dataset.section));}
 function presetOf(p){if(p.scope==="custom")return "custom";return Object.entries(PRESETS).find(([,months])=>months.length===p.months.length&&months.every(m=>p.months.includes(m)))?.[0]||"custom";}
 function renderMetrics(){
- $("metricEditors").innerHTML=report.metrics.map((m,i)=>`<section class="period-card" data-metric="${escapeHTML(m.id)}">
- <div class="period-head"><h3>المؤشر ${i+1}</h3><button class="btn ghost" data-action="deleteMetric" type="button" ${report.metrics.length===1?"disabled":""}>حذف</button></div>
- <div class="two-cols"><div><label>اسم المؤشر</label><input data-field="name" maxlength="100" value="${escapeHTML(m.name)}"></div><div><label>الوحدة</label><input data-field="unit" maxlength="40" value="${escapeHTML(m.unit)}"></div></div>
- <label>الحساب</label><select data-field="method"><option value="sum" ${m.method==="sum"?"selected":""}>مجموع القيم</option><option value="average" ${m.method==="average"?"selected":""}>متوسط الأشهر المتاحة</option></select>
- </section>`).join("");
+ $("metricEditors").innerHTML=report.metrics.map((m,i)=>{
+  const bases=report.metrics.filter(x=>x.method!=="ratio"&&x.id!==m.id);
+  const choices=(field)=>`<select data-field="${field}"><option value="">اختر مؤشرًا</option>${bases.map(b=>`<option value="${escapeHTML(b.id)}" ${m[field]===b.id?"selected":""}>${escapeHTML(b.name)}</option>`).join("")}</select>`;
+  return `<section class="period-card" data-metric="${escapeHTML(m.id)}">
+   <div class="period-head"><h3>المؤشر ${i+1}</h3><button class="btn ghost" data-action="deleteMetric" type="button" ${report.metrics.length===1?"disabled":""}>حذف</button></div>
+   <div class="two-cols"><div><label>اسم المؤشر</label><input data-field="name" maxlength="100" value="${escapeHTML(m.name)}"></div><div><label>الوحدة</label><input data-field="unit" maxlength="40" value="${escapeHTML(m.unit)}"></div></div>
+   <label>الحساب</label><select data-field="method"><option value="sum" ${m.method==="sum"?"selected":""}>مجموع</option><option value="average" ${m.method==="average"?"selected":""}>متوسط الأشهر</option><option value="ratio" ${m.method==="ratio"?"selected":""}>نسبة مرجحة (البسط ÷ المقام)</option></select>
+   ${m.method==="ratio"?`<div class="two-cols"><div><label>البسط</label>${choices("numeratorId")}</div><div><label>المقام</label>${choices("denominatorId")}</div></div><p class="hint">تحسب النسبة من مجموع البسط ÷ مجموع المقام × 100 للأشهر ذات البيانات المشتركة.</p>`:""}
+  </section>`;
+ }).join("");
 }
 function renderPeriods(){
  $("periodEditors").innerHTML=report.periods.map((p,i)=>`<section class="period-card" data-period="${escapeHTML(p.id)}">
@@ -38,7 +43,7 @@ function renderPeriods(){
 }
 function renderData(){
  $("dataEditors").innerHTML=report.periods.map((p,i)=>`<section class="data-block"><h3>${escapeHTML(p.name||"الفترة "+(i+1))} — ${escapeHTML(p.year)}</h3>
- ${report.metrics.map(m=>`<div class="data-metric"><h4>${escapeHTML(m.name)} <small>${escapeHTML(m.unit)}</small></h4><div class="data-grid">
+ ${report.metrics.filter(m=>m.method!=="ratio").map(m=>`<div class="data-metric"><h4>${escapeHTML(m.name)} <small>${escapeHTML(m.unit)}</small></h4><div class="data-grid">
  ${[...p.months].sort((a,b)=>a-b).map(month=>{const key=keyOf(p.id,month,m.id);return `<div><label>${MONTHS[month-1]}</label><input type="number" min="0" step="any" data-entry="${escapeHTML(key)}" placeholder="غير متوفر" value="${escapeHTML(report.entries[key]??"")}"></div>`}).join("")}
  </div></div>`).join("")}</section>`).join("");
 }
@@ -86,7 +91,9 @@ $("addMetric").onclick=()=>{if(report.metrics.length>=30)return status("الحد
 $("addPeriod").onclick=()=>{if(report.periods.length>=100)return status("الحد الأقصى 100 فترة.");report.periods.push(period());rerender();};
 $("metricEditors").addEventListener("change",e=>{
  const node=e.target.closest("[data-metric]");const m=report.metrics.find(m=>m.id===node?.dataset.metric);
- if(!m)return;if(e.target.dataset.field)m[e.target.dataset.field]=e.target.value;
+ if(!m)return;if(e.target.dataset.field){m[e.target.dataset.field]=e.target.value;
+  if(e.target.dataset.field==="method"&&e.target.value==="ratio"){const bases=report.metrics.filter(x=>x.id!==m.id&&x.method!=="ratio");m.numeratorId=bases[0]?.id||"";m.denominatorId=bases[1]?.id||"";m.unit="%";}
+ }
  rerender();
 });
 $("metricEditors").addEventListener("input",e=>{
@@ -97,6 +104,7 @@ $("metricEditors").addEventListener("input",e=>{
 $("metricEditors").addEventListener("click",e=>{
  if(e.target.dataset.action!=="deleteMetric"||report.metrics.length<=1)return;
  const id=e.target.closest("[data-metric]")?.dataset.metric;
+ if(report.metrics.some(x=>x.method==="ratio"&&(x.numeratorId===id||x.denominatorId===id)))return status("المؤشر مستخدم في حساب نسبة. عدّل النسبة أولًا.");
  report.metrics=report.metrics.filter(m=>m.id!==id);
  for(const k of Object.keys(report.entries)){try{if(JSON.parse(k)[2]===id)delete report.entries[k];}catch{}}
  rerender();
@@ -132,7 +140,7 @@ $("downloadCsv").onclick=()=>{
  try{
   validate(report);
   const rows=[];
-  for(const p of report.periods)for(const month of p.months)for(const m of report.metrics){
+  for(const p of report.periods)for(const month of p.months)for(const m of report.metrics.filter(m=>m.method!=="ratio")){
    const value=report.entries[keyOf(p.id,month,m.id)];
    if(value!==undefined&&value!==null&&value!=="")rows.push({period:p.name||p.id,year:p.year,month,metric:m.name,value});
   }
