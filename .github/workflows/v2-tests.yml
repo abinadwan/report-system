@@ -1,0 +1,36 @@
+name: Report System V2 checks
+on:
+  push:
+    branches: [feat/report-system-v2]
+  pull_request:
+    paths:
+      - "v2/**"
+      - ".github/workflows/v2-tests.yml"
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: JavaScript syntax
+        run: |
+          node --check v2/js/engine.js
+          node --check v2/js/csv.js
+          node --check v2/js/xlsx.js
+          node --check v2/js/storage.js
+          node --check v2/js/migrate.js
+          node --check v2/js/app-v3.js
+      - name: Engine regression tests
+        run: node --test v2/tests/*.test.js
+      - name: Install browser test dependencies
+        working-directory: v2
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Browser regression tests
+        working-directory: v2
+        run: npm run test:browser
