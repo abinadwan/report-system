@@ -196,12 +196,12 @@ test("invalid library backup does not replace existing reports",async ({page})=>
  await expect(page.locator("#reportCards")).toContainText("يبقى محفوظًا");
 });
 
-test("brand header displays original logo, footer and MIT license",async ({page})=>{
+test("brand header displays original logo and repository keeps MIT license",async ({page})=>{
  await expect(page.locator(".brand-lockup img")).toHaveAttribute("src","./assets/report-system-mark.svg");
  const response=await page.request.get("/assets/report-system-mark.svg");
  expect(response.ok()).toBeTruthy();
  expect(await response.text()).toContain("<svg");
- await expect(page.locator(".site-footer")).toContainText("MIT");
+ await expect(page.locator(".site-footer")).not.toContainText("MIT");
  const license=await page.request.get("/LICENSE");
  expect(license.ok()).toBeTruthy();
  expect(await license.text()).toContain("MIT License");
