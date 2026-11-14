@@ -307,7 +307,7 @@ showView(location.hash.replace("#","")||"library");
 const needsRecovery=loadLibrary().length===0;
 if(needsRecovery){
  readLibrary().then(async saved=>{
-  const valid=Array.isArray(saved)?saved.flatMap(item=>{try{validate(item);return typeof item.id==="string"&&item.id?[item]:[];}catch{return [];}):[];
+  const valid=Array.isArray(saved)?saved.flatMap(item=>{try{validate(item);return typeof item.id==="string"&&item.id?[item]:[];}catch{return [];}}):[];
   // The full library must take precedence over the legacy single-draft backup.
   if(valid.length&&!loadLibrary().length){
    library=valid.slice(0,100);
