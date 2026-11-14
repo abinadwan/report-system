@@ -82,3 +82,14 @@ test("Excel XLSX first sheet imports wide-format metrics",async ({page})=>{
  await expect(page.locator("#periodEditors .period-card")).toHaveCount(1);
  await expect(page.locator("#summaryCards .metric strong")).toContainText("٤٤");
 });
+
+test("legacy report migration preserves V1 and creates V2 report",async ({page})=>{
+ const old={id:"original",name:"سجل قديم",general:{title:"تقرير البيانات القديم"},calls2025:[10,20],q1_2026:{jan:30,feb:40,mar:50},kpis:{answerRate2026:96}};
+ await page.evaluate(value=>localStorage.setItem("report_builder_reports_v3",JSON.stringify([value])),old);
+ page.on("dialog",dialog=>dialog.accept());
+ await page.locator("#migrateV1").click();
+ await expect(page.locator("#reportSelect option")).toHaveCount(2);
+ await expect(page.locator("#title")).toHaveValue("تقرير البيانات القديم");
+ const original=await page.evaluate(()=>JSON.parse(localStorage.getItem("report_builder_reports_v3")));
+ expect(original[0].id).toBe("original");
+});
