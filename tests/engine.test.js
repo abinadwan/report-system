@@ -90,3 +90,33 @@ test("invalid ratio references fail validation",()=>{
  r.metrics[2].denominatorId="missing";
  assert.throws(()=>validate(r),/بسط ومقام/);
 });
+
+test("does not claim growth when the baseline has missing months",()=>{
+ const r=newReport();
+ r.periods=[{...period(2025),id:"a",months:[1,2]},{...period(2026),id:"b",months:[1,2]}];
+ const id=r.metrics[0].id;
+ r.entries[keyOf("a",1,id)]=10;
+ r.entries[keyOf("b",1,id)]=20;
+ r.entries[keyOf("b",2,id)]=20;
+ const result=comparison(calc(r)[0].periods);
+ assert.equal(result[0].complete,false);
+ assert.equal(result[1].delta,null);
+ assert.equal(result[1].comparable,false);
+});
+test("blocks impossible bounded operational ratio",()=>{
+ const r=applyTemplate(newReport(),"call-center");
+ r.periods=[{...period(2026),id:"p",months:[1]}];
+ const [offered,answered]=r.metrics;
+ r.entries[keyOf("p",1,offered.id)]=10;
+ r.entries[keyOf("p",1,answered.id)]=20;
+ assert.throws(()=>validate(r),/البسط المقام/);
+});
+test("unbounded ratios may legitimately exceed one hundred percent",()=>{
+ const r=newReport();
+ const a={...metric("current","unit","sum"),id:"a"};
+ const b={...metric("reference","unit","sum"),id:"b"};
+ const ratio={...metric("growth multiple","%","ratio"),id:"c",numeratorId:"a",denominatorId:"b"};
+ r.metrics=[a,b,ratio];r.periods=[{...period(2026),id:"p",months:[1]}];
+ r.entries[keyOf("p",1,"a")]=20;r.entries[keyOf("p",1,"b")]=10;
+ assert.equal(calc(r)[2].periods[0].result,200);
+});
