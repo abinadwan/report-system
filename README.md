@@ -1,5 +1,14 @@
 # Internal Executive Reporting System
 
+## Report System 2.0 (new)
+
+The new dynamic report builder is located in [`v2/`](v2/). It supports flexible years/months, multiple metrics, weighted ratios, CSV/XLSX import, multiple saved reports, optional V1 migration and browser PDF printing. The original application remains available at repository root until V2 replaces it.
+
+Run `python -m http.server 5500` from repository root and visit `http://localhost:5500/v2/`. Read [V2 documentation](v2/README.md) for limitations and validation commands.
+
+---
+
+
 ## Project overview
 Internal Executive Reporting System is a lightweight internal reporting and executive dashboard generator for operational performance reporting. It is designed for teams that need a quick, editable, and printable Arabic RTL report without backend complexity.
 
