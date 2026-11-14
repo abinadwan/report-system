@@ -20,7 +20,7 @@ The browser app now has three focused screens:
 2. **إدخال البيانات** — configure periods and metrics, then enter or import source values.
 3. **عرض التقرير** — review KPIs, chart/table sections, warnings, and print PDF.
 
-Navigation stays on the same origin without reloading the app. Saved reports are mirrored to IndexedDB as a complete library for recovery; per-report localStorage records are also retained. Period-to-period changes are not calculated when either selected period is incomplete or their month counts differ.
+The data-entry screen uses an editable **month-by-period table**, with metric tabs and horizontally scrollable columns for large comparisons. Navigation stays on the same origin without reloading the app. Saved reports are mirrored to IndexedDB as a complete library for recovery; per-report localStorage records are also retained. The library can be backed up and restored using JSON. Period-to-period changes are not calculated when either selected period is incomplete or their month counts differ.
 
 ## Available features
 
