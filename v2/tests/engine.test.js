@@ -35,8 +35,9 @@ test("reject invalid input and schema",()=>{
 });
 test("template changes create independent metric IDs",()=>{
  const r=applyTemplate(newReport(),"call-center");
- assert.equal(r.metrics.length,2);
+ assert.equal(r.metrics.length,3);
  assert.notEqual(r.metrics[0].id,r.metrics[1].id);
+ assert.equal(r.metrics[2].method,"ratio");
  assert.equal(Object.keys(r.entries).length,0);
 });
 test("CSV with quoted comma and newline parses safely",()=>{
@@ -70,4 +71,22 @@ test("Arabic CSV headers and Arabic month names work",()=>{
 test("ISO monthly date column is accepted",()=>{
  const rows=parseCSV("Date,Orders\n2027-03,42\n2027-04-12,25");
  assert.deepEqual(readFlexibleFormat(rows).map(x=>x.month),[3,4]);
+});
+
+test("weighted rate uses total numerator / total denominator",()=>{
+ const r=applyTemplate(newReport(),"call-center");
+ r.periods=[{...period(2026),id:"p",months:[1,2]}];
+ const [calls,answered,rate]=r.metrics;
+ r.entries[keyOf("p",1,calls.id)]=100;
+ r.entries[keyOf("p",1,answered.id)]=90;
+ r.entries[keyOf("p",2,calls.id)]=10;
+ r.entries[keyOf("p",2,answered.id)]=5;
+ const result=calc(r).find(x=>x.metric.id===rate.id).periods[0];
+ assert.ok(Math.abs(result.result-(95/110*100))<1e-9);
+ assert.equal(result.count,2);
+});
+test("invalid ratio references fail validation",()=>{
+ const r=applyTemplate(newReport(),"call-center");
+ r.metrics[2].denominatorId="missing";
+ assert.throws(()=>validate(r),/بسط ومقام/);
 });
