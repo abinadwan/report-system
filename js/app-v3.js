@@ -289,17 +289,21 @@ showView(location.hash.replace("#","")||"library");
 // Recover the complete library from IndexedDB if localStorage was cleared or corrupted.
 const needsRecovery=loadLibrary().length===0;
 if(needsRecovery){
- readLibrary().then(saved=>{
-  if(!Array.isArray(saved)||!saved.length)return;
-  const valid=saved.flatMap(item=>{try{validate(item);return typeof item.id==="string"&&item.id?[item]:[];}catch{return [];}});
-  if(!valid.length||loadLibrary().length)return;
-  library=valid.slice(0,100);
-  report=library.find(r=>r.id===localStorage.getItem(ACTIVE_KEY))||library[0];
-  syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
-  status("تم استرداد مكتبة التقارير من قاعدة البيانات المحلية.");
+ readLibrary().then(async saved=>{
+  const valid=Array.isArray(saved)?saved.flatMap(item=>{try{validate(item);return typeof item.id==="string"&&item.id?[item]:[];}catch{return [];}):[];
+  // The full library must take precedence over the legacy single-draft backup.
+  if(valid.length&&!loadLibrary().length){
+   library=valid.slice(0,100);
+   report=library.find(r=>r.id===localStorage.getItem(ACTIVE_KEY))||library[0];
+   syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
+   status("تم استرداد مكتبة التقارير من قاعدة البيانات المحلية.");
+   return;
+  }
+  if(valid.length||loadLibrary().length)return;
+  const older=await readDraft();
+  if(older){report=validate(older);report.id ||= uid();library=[report];
+   syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
+   status("تم استرداد المسودة القديمة.");
+  }
  }).catch(()=>{});
- // Older installations stored only the active draft.
- readDraft().then(saved=>{if(!loadLibrary().length&&saved&&library.length===1){
-  report=validate(saved);report.id ||= uid();library=[report];syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
- }}).catch(()=>{});
 }
