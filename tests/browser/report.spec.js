@@ -264,7 +264,8 @@ test("four report display designs update preview immediately and survive reload"
   await page.locator('input[name="report-design"][value="'+id+'"]').check();
   await expect(page.locator("#preview")).toHaveAttribute("data-design",id);
   const accent=await page.locator("#preview .preview-header").evaluate(el=>getComputedStyle(el).backgroundImage);
-  expect(accent).not.toBe("none");
+  if(id==="formal")expect(accent).toBe("none");
+  else expect(accent).not.toBe("none");
  }
  await page.locator("#save").evaluate(el=>el.click());
  await page.reload();
