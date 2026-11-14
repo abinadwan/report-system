@@ -32,5 +32,5 @@ export function readLongFormat(rows){
 }
 export function encodeCSV(rows){
  const q=s=>'"'+String(s??"").replaceAll('"','""')+'"';
- return [EXAMPLE_HEADER,...rows.map(r=>[r.year,r.month,r.metric,r.value].map(q).join(","))].join("\r\n");
+ return [EXAMPLE_HEADER,...rows.map(r=>[r.period??String(r.year),r.year,r.month,r.metric,r.value].map(q).join(","))].join("\r\n");
 }
