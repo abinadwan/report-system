@@ -16,8 +16,8 @@
   </div>
   <section class="editor-section"><div class="section-head"><div><h2>1. المؤشرات</h2><p>أضف المؤشرات المطلوبة وحدد طريقة حساب كل واحد.</p></div><button type="button" id="addMetric" class="btn secondary">+ مؤشر</button></div><div id="metricEditors"></div></section>
   <section class="editor-section"><div class="section-head"><div><h2>2. فترات التحليل</h2><p>اختر أي سنوات وأشهر، ويمكن تكرار السنة لفترات مختلفة.</p></div><button type="button" id="addPeriod" class="btn secondary">+ فترة</button></div><div id="periodEditors"></div></section>
-  <section class="editor-section"><div class="section-head"><div><h2>3. البيانات</h2><p>أدخل القيم يدويًا أو استورد CSV بنمط year,month,metric,value.</p></div></div>
-   <div class="actions"><label class="btn secondary file-button">استيراد CSV<input type="file" id="importCsv" accept=".csv,text/csv" hidden></label><button class="btn secondary" id="downloadCsv" type="button">تنزيل CSV</button></div>
+  <section class="editor-section"><div class="section-head"><div><h2>3. البيانات</h2><p>أدخل القيم يدويًا أو استورد Excel أو CSV بجدول أعمدته سنة وشهر ومؤشرات، أو بنمط year,month,metric,value.</p></div></div>
+   <div class="actions"><label class="btn secondary file-button">استيراد Excel / CSV<input type="file" id="importCsv" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label><button class="btn secondary" id="downloadCsv" type="button">تنزيل CSV</button></div>
    <p class="hint">عند استيراد CSV ستُضاف السنوات والمؤشرات الموجودة في الملف تلقائيًا. القيم المتكررة للثلاثية (سنة، شهر، مؤشر) مرفوضة لتجنب الحساب المزدوج.</p>
    <div id="dataEditors"></div>
   </section>
