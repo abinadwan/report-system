@@ -23,6 +23,12 @@ function saveDraft(){try{validate(report);localStorage.setItem(KEY,JSON.stringif
  writeDraft(structuredClone(report)).catch(()=>{});renderLibrary();status("تم الحفظ على هذا المتصفح.");}catch(e){status("تعذر الحفظ: "+e.message);}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveDraft,650);}
 function syncTop(){$("title").value=report.title;$("kind").value=report.kind;$("template").value=report.template;document.querySelectorAll("[data-section]").forEach(el=>el.checked=report.sections.includes(el.dataset.section));}
+function renderSections(){
+ const names={summary:"ملخص الأداء",chart:"الرسوم البيانية",table:"الجداول"};
+ const nodes={summary:$("summarySection"),chart:$("chartSection"),table:$("tableSection")};
+ $("sectionOrder").innerHTML=report.sections.map((id,index)=>`<div class="section-order-row" data-section-id="${id}"><span>${names[id]}</span><div><button type="button" class="btn secondary" data-move="-1" ${index===0?"disabled":""} aria-label="تحريك ${names[id]} للأعلى">↑</button><button type="button" class="btn secondary" data-move="1" ${index===report.sections.length-1?"disabled":""} aria-label="تحريك ${names[id]} للأسفل">↓</button></div></div>`).join("");
+ report.sections.forEach(id=>$("preview").insertBefore(nodes[id],$("warnings")));
+}
 function presetOf(p){if(p.scope==="custom")return "custom";return Object.entries(PRESETS).find(([,months])=>months.length===p.months.length&&months.every(m=>p.months.includes(m)))?.[0]||"custom";}
 function renderMetrics(){
  $("metricEditors").innerHTML=report.metrics.map((m,i)=>{
@@ -82,14 +88,15 @@ function draw(){
  if(report.metrics.some(m=>m.method==="average"))warnings.push("متوسط الأشهر غير مرجح؛ لا تستخدمه لحساب نسب تشغيلية مجمعة مثل معدل الإجابة.");
  $("warnings").textContent=warnings.join(" ");
 }
-function rerender(){syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();scheduleSave();}
+function rerender(){syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();scheduleSave();}
 function changeTop(id,property){$(id).addEventListener("input",e=>{report[property]=e.target.value;draw();scheduleSave();});}
 changeTop("title","title");changeTop("kind","kind");
 $("template").addEventListener("change",e=>{
  if(!confirm("تغيير القالب سيستبدل جميع المؤشرات والقيم المدخلة. هل تريد المتابعة؟")){e.target.value=report.template;return;}
  report=applyTemplate(report,e.target.value);rerender();
 });
-document.querySelectorAll("[data-section]").forEach(el=>el.addEventListener("change",()=>{report.sections=Array.from(document.querySelectorAll("[data-section]:checked"),e=>e.dataset.section);draw();scheduleSave();}));
+document.querySelectorAll("[data-section]").forEach(el=>el.addEventListener("change",()=>{const chosen=Array.from(document.querySelectorAll("[data-section]:checked"),e=>e.dataset.section);report.sections=[...report.sections.filter(id=>chosen.includes(id)),...chosen.filter(id=>!report.sections.includes(id))];draw();renderSections();scheduleSave();}));
+$("sectionOrder").addEventListener("click",e=>{const button=e.target.closest("[data-move]");if(!button)return;const id=button.closest("[data-section-id]")?.dataset.sectionId;const index=report.sections.indexOf(id),next=index+Number(button.dataset.move);if(index<0||next<0||next>=report.sections.length)return;[report.sections[index],report.sections[next]]=[report.sections[next],report.sections[index]];renderSections();scheduleSave();});
 $("addMetric").onclick=()=>{if(report.metrics.length>=30)return status("الحد الأقصى 30 مؤشرًا.");report.metrics.push(metric());rerender();};
 $("addPeriod").onclick=()=>{if(report.periods.length>=100)return status("الحد الأقصى 100 فترة.");report.periods.push(period());rerender();};
 $("metricEditors").addEventListener("change",e=>{
@@ -193,7 +200,7 @@ $("migrateV1").onclick=()=>{
  }catch(e){status("تعذر ترحيل V1: "+e.message);}
 };
 $("print").onclick=()=>{try{validate(report);window.print();}catch(e){status(e.message);}};
-syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();
+syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
 if(!localStorage.getItem(KEY)){
  readDraft().then(saved=>{if(saved&&!localStorage.getItem(KEY)){report=validate(saved);report.id ||= uid();library=[report];syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();status("تم استرداد المسودة من قاعدة البيانات المحلية.");}}).catch(()=>{});
 }
