@@ -36,11 +36,19 @@ function createReport(seedName = "تقرير جديد") {
   const now = new Date().toISOString();
   return { id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(16).slice(2)}`, name: seedName, createdAt: now, updatedAt: now,
     general: { title: "تقرير تنفيذي داخلي", subtitle: "ملخص أداء مركز الاتصال", establishedDate: "", scope: "" },
-    calls2025: new Array(12).fill(0), q1_2026: { jan: 0, feb: 0, mar: 0 }, kpis: { answerRate2026: 0, averageResponseSpeed: 0 }, theme: "sdaia", logoDataUrl: "" };
+    calls2025: new Array(12).fill(0), q1_2026: { jan: 0, feb: 0, mar: 0 }, kpis: { answerRate2026: 0, averageResponseSpeed: 0 }, theme: "light", logoDataUrl: "" };
 }
 function ensureInit() {
   let reports = storage.getReports();
   if (!reports.length) { reports = [createReport("التقرير الافتراضي")]; Object.assign(reports[0], demoData); storage.saveReports(reports); storage.setActiveId(reports[0].id); }
+  let updated = false;
+  reports.forEach((report) => {
+    if (!["light", "dark-executive"].includes(report.theme)) {
+      report.theme = "light";
+      updated = true;
+    }
+  });
+  if (updated) storage.saveReports(reports);
   if (!reports.some((r) => r.id === storage.getActiveId())) storage.setActiveId(reports[0].id);
 }
 const activeReport = () => storage.getReports().find((r) => r.id === storage.getActiveId()) || storage.getReports()[0];
