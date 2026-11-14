@@ -13,7 +13,35 @@ report.id ||= uid();
 let library=loadLibrary();
 if(library.length){report=library.find(r=>r.id===localStorage.getItem(ACTIVE_KEY))||library[0];}else{library=[report];}
 function loadLibrary(){try{const parsed=JSON.parse(localStorage.getItem(LIBRARY_KEY));if(Array.isArray(parsed)&&parsed.length&&parsed.length<=100){return parsed.map(r=>{validate(r);if(typeof r.id!=="string"||!r.id)throw Error("Invalid report ID");return r;});}}catch(e){console.warn("Library recovery failed",e);}return [];}
-function renderLibrary(){const selector=$("reportSelect");selector.innerHTML=library.map(r=>`<option value="${escapeHTML(r.id)}">${escapeHTML(r.title||"تقرير بدون عنوان")}</option>`).join("");selector.value=report.id;}
+function renderLibrary(){const selector=$("reportSelect");selector.innerHTML=library.map(r=>`<option value="${escapeHTML(r.id)}">${escapeHTML(r.title||"تقرير بدون عنوان")}</option>`).join("");selector.value=report.id;renderLibraryCards();}
+const VIEWS=["library","data","preview"];
+function showView(name){
+  const view=VIEWS.includes(name)?name:"library";
+  for(const id of VIEWS){
+    $("view-"+id).hidden=id!==view;
+    const button=$("nav-"+id);
+    if(id===view)button.setAttribute("aria-current","page");
+    else button.removeAttribute("aria-current");
+  }
+  if(location.hash!=="#"+view)history.replaceState(null,"","#"+view);
+  window.scrollTo({top:0,behavior:"instant"});
+}
+function renderLibraryCards(){
+  const labels={comparison:"مقارنة أداء",periodic:"تقرير دوري",trend:"تحليل اتجاهات",executive:"ملخص تنفيذي"};
+  $("reportCards").innerHTML=library.map(r=>`<button type="button" class="report-card ${r.id===report.id?"selected":""}" data-open-report="${escapeHTML(r.id)}">
+    <span class="report-card-title">${escapeHTML(r.title||"تقرير بدون عنوان")}</span>
+    <span class="report-card-description">${escapeHTML(labels[r.kind]||"تقرير")} · ${r.periods.length} فترة · ${r.metrics.length} مؤشر</span>
+    <span class="report-card-meta">${r.id===report.id?"التقرير المحدد":"فتح التقرير وإدخال البيانات ←"}</span>
+  </button>`).join("");
+}
+function openPreview(){
+  try{validate(report);saveDraft();draw();showView("preview");}
+  catch(e){showView("data");status("راجع البيانات قبل عرض المؤشرات: "+e.message);}
+}
+function newReportAndOpen(){
+  if(library.length>=100)return status("الحد الأقصى 100 تقرير.");
+  saveDraft();report=newReport();report.id=uid();library.push(report);rerender();showView("data");
+}
 function restoreDraft(){try{const v=JSON.parse(localStorage.getItem(KEY));return validate(v);}catch{return newReport();}}
 function status(text){$("status").textContent=text;}
 function saveDraft(){try{validate(report);localStorage.setItem(KEY,JSON.stringify(report));
@@ -182,7 +210,8 @@ $("restore").onchange=async e=>{
  try{if(file.size>5*1024*1024)throw Error("الملف كبير جدًا.");const data=validate(JSON.parse(await file.text()));if(!confirm("استبدال التقرير الحالي بالنسخة الاحتياطية؟"))return;report={...data,id:report.id};rerender();status("تم استيراد النسخة.");}catch(err){status("تعذر الاستيراد: "+err.message);}
 };
 $("clear").onclick=()=>{if(!confirm("سيتم مسح محتوى التقرير الحالي. هل حفظت نسخة احتياطية؟"))return;const id=report.id;report=newReport();report.id=id;rerender();};
-$("newReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");saveDraft();report=newReport();report.id=uid();library.push(report);rerender();};
+$("newReport").onclick=newReportAndOpen;
+$("startNewReport").onclick=newReportAndOpen;
 $("duplicateReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");saveDraft();report=structuredClone(report);report.id=uid();report.title+=" (نسخة)";library.push(report);rerender();};
 $("deleteReport").onclick=()=>{if(!confirm("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);library=library.filter(r=>r.id!==report.id);if(!library.length){report=newReport();report.id=uid();library=[report];}else report=library[0];rerender();};
 $("reportSelect").onchange=e=>{const selectedId=e.target.value;saveDraft();const selected=library.find(r=>r.id===selectedId);if(selected){report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();}};
@@ -199,8 +228,24 @@ $("migrateV1").onclick=()=>{
   saveDraft();library.push(...migrated);report=migrated[0];rerender();status("تم ترحيل "+migrated.length+" تقريرًا. احتفظ بنسخة احتياطية.");
  }catch(e){status("تعذر ترحيل V1: "+e.message);}
 };
+document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>{
+  if(button.dataset.view==="preview")openPreview();
+  else {if(button.dataset.view==="library")saveDraft();showView(button.dataset.view);}
+}));
+$("backLibrary").onclick=()=>{saveDraft();showView("library");};
+$("backToData").onclick=()=>showView("data");
+$("continuePreview").onclick=openPreview;
+$("continuePreviewBottom").onclick=openPreview;
+$("reportCards").addEventListener("click",e=>{
+  const card=e.target.closest("[data-open-report]");if(!card)return;
+  const selected=library.find(r=>r.id===card.dataset.openReport);if(!selected)return;
+  saveDraft();report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
+  localStorage.setItem(ACTIVE_KEY,report.id);
+  showView("data");
+});
 $("print").onclick=()=>{try{validate(report);window.print();}catch(e){status(e.message);}};
 syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
 if(!localStorage.getItem(KEY)){
- readDraft().then(saved=>{if(saved&&!localStorage.getItem(KEY)){report=validate(saved);report.id ||= uid();library=[report];syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();status("تم استرداد المسودة من قاعدة البيانات المحلية.");}}).catch(()=>{});
+ readDraft().then(saved=>{if(saved&&!localStorage.getItem(KEY)){report=validate(saved);report.id ||= uid();library=[report];syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
+showView(location.hash.replace("#","")||"library");status("تم استرداد المسودة من قاعدة البيانات المحلية.");}}).catch(()=>{});
 }
