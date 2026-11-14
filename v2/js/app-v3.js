@@ -185,7 +185,7 @@ $("clear").onclick=()=>{if(!confirm("سيتم مسح محتوى التقرير �
 $("newReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");saveDraft();report=newReport();report.id=uid();library.push(report);rerender();};
 $("duplicateReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");saveDraft();report=structuredClone(report);report.id=uid();report.title+=" (نسخة)";library.push(report);rerender();};
 $("deleteReport").onclick=()=>{if(!confirm("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);library=library.filter(r=>r.id!==report.id);if(!library.length){report=newReport();report.id=uid();library=[report];}else report=library[0];rerender();};
-$("reportSelect").onchange=e=>{const selectedId=e.target.value;saveDraft();const selected=library.find(r=>r.id===selectedId);if(selected){report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();}};
+$("reportSelect").onchange=e=>{const selectedId=e.target.value;saveDraft();const selected=library.find(r=>r.id===selectedId);if(selected){report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();}};
 $("backupAll").onclick=()=>{try{library.forEach(validate);download("report-system-v2-library.json",JSON.stringify({schemaVersion:3,reports:library},null,2),"application/json");}catch(e){status(e.message);}};
 $("migrateV1").onclick=()=>{
  try{
@@ -202,5 +202,5 @@ $("migrateV1").onclick=()=>{
 $("print").onclick=()=>{try{validate(report);window.print();}catch(e){status(e.message);}};
 syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
 if(!localStorage.getItem(KEY)){
- readDraft().then(saved=>{if(saved&&!localStorage.getItem(KEY)){report=validate(saved);report.id ||= uid();library=[report];syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();status("تم استرداد المسودة من قاعدة البيانات المحلية.");}}).catch(()=>{});
+ readDraft().then(saved=>{if(saved&&!localStorage.getItem(KEY)){report=validate(saved);report.id ||= uid();library=[report];syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();status("تم استرداد المسودة من قاعدة البيانات المحلية.");}}).catch(()=>{});
 }
