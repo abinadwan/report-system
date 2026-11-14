@@ -303,6 +303,21 @@ $("restoreAll").onchange=async e=>{
  }catch(err){status("فشلت الاستعادة ولم تُستبدل المكتبة: "+err.message);}
  finally{restoringLibrary=false;}
 };
+document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>{
+  if(button.dataset.view==="preview")openPreview();
+  else {if(button.dataset.view==="library")saveDraft();showView(button.dataset.view);}
+}));
+$("backLibrary").onclick=()=>{saveDraft();showView("library");};
+$("backToData").onclick=()=>showView("data");
+$("continuePreview").onclick=openPreview;
+$("continuePreviewBottom").onclick=openPreview;
+$("reportCards").addEventListener("click",e=>{
+  const card=e.target.closest("[data-open-report]");if(!card)return;
+  const selected=library.find(r=>r.id===card.dataset.openReport);if(!selected)return;
+  saveDraft();report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
+  localStorage.setItem(ACTIVE_KEY,report.id);
+  showView("data");
+});
 $("print").onclick=()=>{try{validate(report);window.print();}catch(e){status(e.message);}};
 syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
 showView(location.hash.replace("#","")||"library");
