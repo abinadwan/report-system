@@ -213,7 +213,10 @@ $("dataEditors").addEventListener("input",e=>{
  report.entries[e.target.dataset.entry]=raw===""?null:Number(raw);draw();scheduleSave();
 });
 function download(name,content,type){
- const url=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ const url=URL.createObjectURL(new Blob([content],{type}));
+ const a=document.createElement("a");a.href=url;a.download=name;
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
 $("downloadCsv").onclick=()=>{
  try{
