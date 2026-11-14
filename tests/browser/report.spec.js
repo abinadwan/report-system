@@ -2,7 +2,7 @@ import {execFileSync} from "node:child_process";
 import {test,expect} from "@playwright/test";
 
 test.beforeEach(async ({page})=>{
- await page.goto("/v2/");
+ await page.goto("/");
 });
 
 test("user can create three years and several metrics",async ({page})=>{
