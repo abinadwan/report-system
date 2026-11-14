@@ -390,6 +390,10 @@
       }));
     }
 
+    function escapeTableCell(value) {
+      return String(value ?? "").replace(/[&<>"\x27]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "\x27": "&#39;" }[ch]));
+    }
+
     function renderTable(rows) {
       const head = document.getElementById('tableHead');
       const body = document.getElementById('tableBody');
@@ -406,7 +410,7 @@
                       (col === 'ServiceLevel' && r.ServiceLevel != null && r.ServiceLevel < 80) ||
                       (col === 'AbandonRate' && r.AbandonRate != null && r.AbandonRate > 5)
                       ? 'flag-low' : '';
-          return `<td class="${cls}">${val}</td>`;
+          return `<td class="${cls}">${escapeTableCell(val)}</td>`;
         }).join('');
         return `<tr>${cells}</tr>`;
       }).join('');
