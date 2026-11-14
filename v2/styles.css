@@ -27,3 +27,13 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid 
 @media(max-width:1050px){.shell{grid-template-columns:1fr}.preview-wrap{position:static}}
 @media(max-width:550px){.shell{padding:10px}.workspace{padding:14px}.two-cols{grid-template-columns:1fr}.month-checks{grid-template-columns:repeat(3,1fr)}.data-grid{grid-template-columns:repeat(2,1fr)}}
 @media print{@page{size:A4;margin:14mm}body{background:#fff}.topbar,.workspace,.print-button{display:none!important}.shell{display:block;padding:0;max-width:none}.preview-wrap{position:static}.preview{box-shadow:none;border:0;border-radius:0}.preview-header{print-color-adjust:exact;-webkit-print-color-adjust:exact}.bar-fill{print-color-adjust:exact;-webkit-print-color-adjust:exact}.preview-section,.metric,.bar-row{break-inside:avoid}.preview-header{padding:15mm 10mm}}
+
+[hidden]{display:none!important}
+.data-metric{border:1px solid #e2e9f2;border-radius:10px;padding:12px;margin:12px 0}
+.data-metric h4,.chart-group h4,.preview-section h4{margin:5px 0 12px;color:#284362}
+.data-metric small,.chart-group small,.preview-section h4 small{color:#69809b;font-weight:400}
+.chart-group{padding:8px 0 18px;border-bottom:1px solid #e1eaf4}
+.chart-group:last-child{border-bottom:none}
+.actions label:has(input[type=checkbox]){display:inline-flex;align-items:center;gap:6px;border:1px solid #d9e3ee;border-radius:8px;padding:7px 10px;margin:0;background:#fafcfe}
+.actions label:has(input[type=checkbox]) input{accent-color:#2364aa}
+@media print{.preview{overflow:visible}.preview-section{break-inside:auto}.data-metric,.chart-group,table tr{break-inside:avoid}thead{display:table-header-group}}
