@@ -8,7 +8,7 @@ function load(){try{const raw=localStorage.getItem(STORE_KEY);if(raw){const resu
 function status(message){$("status").textContent=message;clearTimeout(messageTimer);messageTimer=setTimeout(()=>$("status").textContent="",5000);}
 function persist(){try{localStorage.setItem(STORE_KEY,JSON.stringify(state));status("تم الحفظ محليًا.");}catch(e){status("تعذر الحفظ؛ صدّر ملف JSON للاحتفاظ بالبيانات.");}}
 function syncMain(){$("reportTitle").value=state.title;$("reportType").value=state.type;$("template").value=state.template;$("metricName").value=state.metric.name;$("metricUnit").value=state.metric.unit;$("aggregation").value=state.metric.aggregation;}
-function scope(p){const value=Object.entries(PRESETS).find(([,months])=>months.length===p.months.length&&months.every(m=>p.months.includes(m)));return value?.[0]??"custom";}
+function scope(p){if(p.scope==="custom")return "custom";const value=Object.entries(PRESETS).find(([,months])=>months.length===p.months.length&&months.every(m=>p.months.includes(m)));return value?.[0]??"custom";}
 function renderEditors(){
  $("periodEditors").innerHTML=state.periods.map((p,i)=>`<section class="period-card" data-id="${safe(p.id)}">
    <div class="period-head"><h3>الفترة ${i+1}</h3><button type="button" data-action="remove" class="btn ghost" ${state.periods.length===1?"disabled":""}>حذف</button></div>
@@ -43,8 +43,8 @@ function redraw(){renderEditors();renderPreview();}
 function refresh(){renderPreview();}
 $("periodEditors").addEventListener("change",e=>{
  const card=e.target.closest("[data-id]");if(!card)return;const p=state.periods.find(p=>p.id===card.dataset.id);if(!p)return;
- if(e.target.dataset.field==="scope"){const chosen=e.target.value;if(chosen!=="custom")p.months=[...PRESETS[chosen]];}
- if(e.target.dataset.month){const m=Number(e.target.dataset.month);p.months=e.target.checked?[...new Set([...p.months,m])].sort((a,b)=>a-b):p.months.filter(x=>x!==m);}
+ if(e.target.dataset.field==="scope"){const chosen=e.target.value;p.scope=chosen;if(chosen!=="custom")p.months=[...PRESETS[chosen]];}
+ if(e.target.dataset.month){const m=Number(e.target.dataset.month);p.scope="custom";p.months=e.target.checked?[...new Set([...p.months,m])].sort((a,b)=>a-b):p.months.filter(x=>x!==m);}
  if(e.target.dataset.field==="year")p.year=Number(e.target.value);
  if(e.target.dataset.field==="name")p.name=e.target.value;
  redraw();
