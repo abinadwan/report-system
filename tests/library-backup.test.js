@@ -33,5 +33,6 @@ test("duplicate IDs, empty libraries, and invalid reports are rejected",()=>{
  const report={...newReport(),id:"one"};
  assert.throws(()=>parseLibraryBackup(JSON.stringify({schemaVersion:3,reports:[]})),/لا يحتوي/);
  assert.throws(()=>parseLibraryBackup(JSON.stringify({schemaVersion:3,reports:[report,report]})),/مكرر/);
- assert.throws(()=>makeLibraryBackup([{...report,periods:[]}],report),/غير صالح/);
+ const invalid={...report,periods:[]};
+ assert.throws(()=>makeLibraryBackup([invalid],invalid),/غير صالح/);
 });
