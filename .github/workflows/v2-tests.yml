@@ -29,6 +29,7 @@ jobs:
           node --check js/storage.js
           node --check js/library-backup.js
           node --check js/app-v3.js
+          node --check js/i18n.js
       - name: Engine regression tests
         run: node --test tests/*.test.js
       - name: Install browser test dependencies
