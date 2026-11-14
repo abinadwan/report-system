@@ -47,3 +47,18 @@ test("CSV import creates periods and metrics dynamically",async ({page})=>{
  await expect(page.locator("#periodEditors .period-card")).toHaveCount(2);
  await expect(page.locator("#summaryCards .metric").last().locator("strong")).toContainText("٤٥");
 });
+
+test("multiple saved reports can be created and switched without losing data",async ({page})=>{
+ await page.locator("#title").fill("الأول");
+ await page.locator("#save").click();
+ await page.locator("#newReport").click();
+ await page.locator("#title").fill("الثاني");
+ await page.locator("#save").click();
+ await expect(page.locator("#reportSelect option")).toHaveCount(2);
+ await page.locator("#reportSelect").selectOption({index:0});
+ await expect(page.locator("#title")).toHaveValue("الأول");
+ await page.locator("#reportSelect").selectOption({index:1});
+ await expect(page.locator("#title")).toHaveValue("الثاني");
+ await page.reload();
+ await expect(page.locator("#reportSelect option")).toHaveCount(2);
+});
