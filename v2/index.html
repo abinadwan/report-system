@@ -1,66 +1,47 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Report System 2.0 — منشئ التقارير</title>
-  <link rel="stylesheet" href="./styles.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Report System 2.0</title><link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div><strong>Report System <span>2.0</span></strong><small>منشئ التقارير الديناميكي</small></div>
-    <nav><a href="../index.html">الإصدار السابق</a></nav>
-  </header>
-  <main class="shell">
-    <section class="workspace" aria-label="إعداد التقرير">
-      <div class="section-head"><h1>إنشاء تقرير</h1><span class="eyebrow">نسخة أولية قابلة للتجربة</span></div>
-      <label for="reportTitle">عنوان التقرير</label><input id="reportTitle" placeholder="مثال: مقارنة الأداء التشغيلي">
-      <div class="two-cols">
-        <div><label for="reportType">هدف التقرير</label><select id="reportType">
-          <option value="comparison">مقارنة الأداء</option><option value="periodic">استعراض أداء فترة</option><option value="trend">تحليل الاتجاهات</option><option value="executive">ملخص تنفيذي</option>
-        </select></div>
-        <div><label for="template">القالب</label><select id="template">
-          <option value="general">عام — مخصص</option><option value="call-center">مركز الاتصال</option><option value="projects">إدارة المشاريع</option><option value="sales">المبيعات</option>
-        </select></div>
-      </div>
-      <section class="editor-section">
-        <div class="section-head"><div><h2>1. المؤشر</h2><p>عرّف ما تريد قياسه، دون افتراض مجال محدد.</p></div></div>
-        <div class="two-cols">
-          <div><label for="metricName">اسم المؤشر</label><input id="metricName" placeholder="عدد المعاملات"></div>
-          <div><label for="metricUnit">الوحدة</label><input id="metricUnit" placeholder="معاملة"></div>
-        </div>
-        <label for="aggregation">طريقة حساب الفترة</label><select id="aggregation">
-          <option value="sum">المجموع</option><option value="average">المتوسط الشهري</option>
-        </select>
-        <p class="hint">النسب المرجّحة ومؤشرات الزمن تتطلب تعريفات حسابية إضافية وستُضاف في مرحلة محرك المؤشرات.</p>
-      </section>
-      <section class="editor-section">
-        <div class="section-head"><div><h2>2. الفترات</h2><p>أضف أي عدد من السنوات، واختر أشهر كل فترة بحرية.</p></div><button id="addPeriod" class="btn secondary" type="button">+ إضافة فترة</button></div>
-        <div id="periodEditors"></div>
-      </section>
-      <section class="editor-section">
-        <div class="section-head"><div><h2>3. إدخال البيانات</h2><p>أدخل قيمة المؤشر لكل شهر مختار في كل فترة.</p></div></div>
-        <div id="dataEditors"></div>
-      </section>
-      <section class="editor-section">
-        <h2>الحفظ والنسخ الاحتياطي</h2>
-        <div class="actions"><button id="save" class="btn secondary">حفظ محليًا</button><button id="exportJson" class="btn secondary">تصدير JSON</button><label class="btn secondary file-button">استيراد JSON<input id="importJson" type="file" accept=".json,application/json" hidden></label><button id="reset" class="btn ghost">تقرير جديد</button></div>
-        <p class="hint">الحفظ على هذا المتصفح فقط. احتفظ بنسخة JSON احتياطية قبل تنظيف بيانات المتصفح.</p>
-        <div id="status" role="status" aria-live="polite"></div>
-      </section>
-    </section>
-    <aside class="preview-wrap">
-      <article id="reportPreview" class="preview" aria-label="معاينة التقرير">
-        <div class="preview-header"><span>تقرير تحليلي</span><h2 id="previewTitle"></h2><p id="previewDescription"></p></div>
-        <div id="previewMetrics" class="metrics"></div>
-        <div class="preview-section"><h3>مقارنة الفترات</h3><div id="comparisonChart"></div></div>
-        <div class="preview-section"><h3>تفاصيل البيانات</h3><div id="detailsTable"></div></div>
-        <p id="previewNotes" class="notice"></p>
-        <footer>Report System 2.0 · جميع النتائج مشتقة من القيم المدخلة</footer>
-      </article>
-      <button id="print" class="btn primary print-button">طباعة / حفظ PDF</button>
-    </aside>
-  </main>
-  <script type="module" src="./js/app.js"></script>
-</body>
-</html>
+<header class="topbar"><div><strong>Report System <span>2.0</span></strong><small>منصة التقارير المرنة</small></div><nav><a href="../index.html">الإصدار السابق</a></nav></header>
+<main class="shell">
+<section class="workspace" aria-label="محرر التقرير">
+  <div class="section-head"><h1>إنشاء تقرير</h1><span class="eyebrow">HTML + JavaScript</span></div>
+  <label for="title">اسم التقرير</label><input id="title" maxlength="250">
+  <div class="two-cols">
+    <div><label for="kind">الهدف</label><select id="kind"><option value="comparison">مقارنة أداء</option><option value="periodic">تقرير دوري</option><option value="trend">تحليل الاتجاهات</option><option value="executive">ملخص تنفيذي</option></select></div>
+    <div><label for="template">القالب</label><select id="template"><option value="general">تقرير عام</option><option value="call-center">مركز الاتصال</option><option value="projects">المشاريع</option><option value="sales">المبيعات</option></select></div>
+  </div>
+  <section class="editor-section"><div class="section-head"><div><h2>1. المؤشرات</h2><p>أضف المؤشرات المطلوبة وحدد طريقة حساب كل واحد.</p></div><button type="button" id="addMetric" class="btn secondary">+ مؤشر</button></div><div id="metricEditors"></div></section>
+  <section class="editor-section"><div class="section-head"><div><h2>2. فترات التحليل</h2><p>اختر أي سنوات وأشهر، ويمكن تكرار السنة لفترات مختلفة.</p></div><button type="button" id="addPeriod" class="btn secondary">+ فترة</button></div><div id="periodEditors"></div></section>
+  <section class="editor-section"><div class="section-head"><div><h2>3. البيانات</h2><p>أدخل القيم يدويًا أو استورد CSV بنمط year,month,metric,value.</p></div></div>
+   <div class="actions"><label class="btn secondary file-button">استيراد CSV<input type="file" id="importCsv" accept=".csv,text/csv" hidden></label><button class="btn secondary" id="downloadCsv" type="button">تنزيل CSV</button></div>
+   <p class="hint">عند استيراد CSV ستُضاف السنوات والمؤشرات الموجودة في الملف تلقائيًا. القيم المتكررة للثلاثية (سنة، شهر، مؤشر) مرفوضة لتجنب الحساب المزدوج.</p>
+   <div id="dataEditors"></div>
+  </section>
+  <section class="editor-section"><h2>4. محتويات التقرير</h2><div class="actions">
+   <label><input type="checkbox" data-section="summary"> ملخص</label>
+   <label><input type="checkbox" data-section="chart"> رسوم مقارنة</label>
+   <label><input type="checkbox" data-section="table"> جدول تفصيلي</label>
+  </div></section>
+  <section class="editor-section"><h2>5. الحفظ والتصدير</h2>
+    <div class="actions"><button id="save" class="btn secondary">حفظ</button><button id="backup" class="btn secondary">نسخة JSON</button><label class="btn secondary file-button">استيراد JSON<input type="file" id="restore" accept=".json,application/json" hidden></label><button id="clear" class="btn ghost">تقرير جديد</button></div>
+    <p class="hint">الحفظ محلي في المتصفح. احتفظ بنسخة احتياطية لأن حذف بيانات المتصفح يحذف التقرير.</p><div id="status" role="status" aria-live="polite"></div>
+  </section>
+</section>
+<aside class="preview-wrap">
+  <article id="preview" class="preview">
+    <div class="preview-header"><span>تقرير تحليلي</span><h2 id="previewTitle"></h2><p id="previewSubtitle"></p></div>
+    <div id="summarySection" class="preview-section"><h3>ملخص الأداء</h3><div id="summaryCards" class="metrics"></div></div>
+    <div id="chartSection" class="preview-section"><h3>مقارنة المؤشرات</h3><div id="charts"></div></div>
+    <div id="tableSection" class="preview-section"><h3>تفاصيل المقارنة</h3><div id="tables"></div></div>
+    <p id="warnings" class="notice"></p>
+    <footer>Report System 2.0 · المؤشرات محسوبة من بيانات المستخدم</footer>
+  </article>
+  <button type="button" id="print" class="btn primary print-button">طباعة / حفظ PDF</button>
+</aside>
+</main>
+<script type="module" src="./js/app-v3.js"></script>
+</body></html>
