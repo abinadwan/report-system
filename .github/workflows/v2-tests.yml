@@ -24,3 +24,11 @@ jobs:
           node --check v2/js/app-v3.js
       - name: Engine regression tests
         run: node --test v2/tests/*.test.js
+      - name: Install browser test dependencies
+        working-directory: v2
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Browser regression tests
+        working-directory: v2
+        run: npm run test:browser
