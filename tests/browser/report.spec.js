@@ -3,6 +3,7 @@ import {test,expect} from "@playwright/test";
 
 test.beforeEach(async ({page})=>{
  await page.goto("/");
+ await page.locator("#nav-data").click();
 });
 
 test("user can create three years and several metrics",async ({page})=>{
@@ -50,6 +51,7 @@ test("CSV import creates periods and metrics dynamically",async ({page})=>{
 });
 
 test("multiple saved reports can be created and switched without losing data",async ({page})=>{
+ await page.locator("#nav-library").click();
  await page.locator("#title").fill("الأول");
  await page.locator("#save").click();
  await page.locator("#newReport").click();
@@ -84,6 +86,7 @@ test("Excel XLSX first sheet imports wide-format metrics",async ({page})=>{
 });
 
 test("legacy report migration preserves V1 and creates V2 report",async ({page})=>{
+ await page.locator("#nav-library").click();
  const old={id:"original",name:"سجل قديم",general:{title:"تقرير البيانات القديم"},calls2025:[10,20],q1_2026:{jan:30,feb:40,mar:50},kpis:{answerRate2026:96}};
  await page.evaluate(value=>localStorage.setItem("report_builder_reports_v3",JSON.stringify([value])),old);
  page.on("dialog",dialog=>dialog.accept());
@@ -102,4 +105,38 @@ test("report sections can be reordered and saved",async ({page})=>{
  await page.locator("#save").click();
  await page.reload();
  await expect(rows.first()).toHaveAttribute("data-section-id","chart");
+});
+
+test("separate data entry and results views keep the same report state",async ({page})=>{
+ await expect(page.locator("#view-data")).toBeVisible();
+ await expect(page.locator("#view-preview")).toBeHidden();
+ await page.locator("#title").fill("مقارنة سنوية");
+ await page.locator("#continuePreview").click();
+ await expect(page.locator("#view-data")).toBeHidden();
+ await expect(page.locator("#view-preview")).toBeVisible();
+ await expect(page.locator("#previewTitle")).toHaveText("مقارنة سنوية");
+ await page.locator("#backToData").click();
+ await expect(page.locator("#title")).toHaveValue("مقارنة سنوية");
+ await page.locator("#nav-library").click();
+ await expect(page.locator("#reportCards .report-card")).toHaveCount(1);
+ await page.locator("#reportCards .report-card").first().click();
+ await expect(page.locator("#view-data")).toBeVisible();
+});
+test("recovers full library from IndexedDB after localStorage loss",async ({page})=>{
+ await page.locator("#nav-library").click();
+ await page.locator("#newReport").click();
+ await page.locator("#title").fill("نسخة مستردة");
+ await page.locator("#save").click();
+ await expect(page.locator("#reportSelect option")).toHaveCount(2);
+ // IndexedDB writes complete asynchronously; wait until the saved library is committed.
+ await expect.poll(()=>page.evaluate(async()=>{
+   const request=indexedDB.open("report-system-v2",2);
+   const db=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+   const tx=db.transaction("libraries","readonly");
+   const records=await new Promise((resolve,reject)=>{const q=tx.objectStore("libraries").get("all");q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);});
+   db.close();return records?.length||0;
+ })).toBe(2);
+ await page.evaluate(()=>localStorage.clear());
+ await page.reload();
+ await expect(page.locator("#reportSelect option")).toHaveCount(2);
 });
