@@ -3,7 +3,7 @@ export const MONTHS = ["يناير","فبراير","مارس","أبريل","ما
 export const PRESETS = Object.freeze({year:[1,2,3,4,5,6,7,8,9,10,11,12],h1:[1,2,3,4,5,6],h2:[7,8,9,10,11,12],q1:[1,2,3],q2:[4,5,6],q3:[7,8,9],q4:[10,11,12]});
 export const TEMPLATES = {
   general:{label:"تقرير عام",metrics:[{name:"عدد المعاملات",unit:"معاملة",method:"sum"}]},
-  "call-center":{label:"مركز الاتصال",metrics:[{name:"المكالمات الواردة",unit:"مكالمة",method:"sum"},{name:"المكالمات المجابة",unit:"مكالمة",method:"sum"},{name:"معدل الإجابة",unit:"%",method:"ratio",numeratorName:"المكالمات المجابة",denominatorName:"المكالمات الواردة"}]},
+  "call-center":{label:"مركز الاتصال",metrics:[{name:"المكالمات الواردة",unit:"مكالمة",method:"sum"},{name:"المكالمات المجابة",unit:"مكالمة",method:"sum"},{name:"معدل الإجابة",unit:"%",method:"ratio",numeratorName:"المكالمات المجابة",denominatorName:"المكالمات الواردة",boundedRatio:true}]},
   projects:{label:"إدارة المشاريع",metrics:[{name:"المهام المكتملة",unit:"مهمة",method:"sum"},{name:"المهام الجديدة",unit:"مهمة",method:"sum"}]},
   sales:{label:"المبيعات",metrics:[{name:"إجمالي المبيعات",unit:"ر.س",method:"sum"},{name:"عدد الطلبات",unit:"طلب",method:"sum"}]}
 };
@@ -14,7 +14,7 @@ export function newReport(){return {schemaVersion:3,title:"تقرير أداء �
 export function applyTemplate(report,key){
  if(!Object.hasOwn(TEMPLATES,key))throw Error("قالب غير معروف");
  const incoming=TEMPLATES[key].metrics.map(m=>metric(m.name,m.unit,m.method));
- incoming.forEach((m,i)=>{const source=TEMPLATES[key].metrics[i];if(source.method==="ratio"){m.numeratorId=incoming.find(x=>x.name===source.numeratorName)?.id;m.denominatorId=incoming.find(x=>x.name===source.denominatorName)?.id;}});
+ incoming.forEach((m,i)=>{const source=TEMPLATES[key].metrics[i];if(source.method==="ratio"){m.numeratorId=incoming.find(x=>x.name===source.numeratorName)?.id;m.denominatorId=incoming.find(x=>x.name===source.denominatorName)?.id;m.boundedRatio=Boolean(source.boundedRatio);}});
  return {...report,template:key,metrics:incoming,entries:{}}; // user must explicitly confirm replacing values
 }
 export function validate(report){
@@ -45,6 +45,15 @@ export function validate(report){
  }
  for(const [key,value] of Object.entries(report.entries)){
    if(key.length>150||!(value===null||value===""||typeof value==="number"&&Number.isFinite(value)&&value>=0))throw Error("قيمة مؤشر غير صالحة.");
+ }
+ for(const m of report.metrics.filter(m=>m.method==="ratio"&&m.boundedRatio)){
+   for(const p of report.periods)for(const month of p.months){
+     const numerator=report.entries[keyOf(p.id,month,m.numeratorId)];
+     const denominator=report.entries[keyOf(p.id,month,m.denominatorId)];
+     if(typeof numerator==="number"&&typeof denominator==="number"&&numerator>denominator){
+       throw Error("لا يمكن أن يتجاوز البسط المقام في "+m.name+" ("+p.year+"، "+MONTHS[month-1]+").");
+     }
+   }
  }
  return report;
 }
@@ -77,7 +86,12 @@ export function calc(report){
  }));
 }
 export function comparison(rows){
- const baseline=rows[0]?.result??null;
- return rows.map(row=>({...row,delta:baseline===null||baseline===0||row.result===null?null:(row.result-baseline)/Math.abs(baseline)*100}));
+ const first=rows[0];
+ const baseline=first?.result??null;
+ return rows.map(row=>{
+   const comparable=Boolean(first?.complete&&row.complete&&first.expected===row.expected);
+   const delta=!comparable||baseline===null||baseline===0||row.result===null?null:(row.result-baseline)/Math.abs(baseline)*100;
+   return {...row,delta,comparable};
+ });
 }
 export function format(n){return n===null||n===undefined?"—":new Intl.NumberFormat("ar-SA",{maximumFractionDigits:2}).format(n);}
