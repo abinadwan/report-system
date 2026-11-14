@@ -1,6 +1,6 @@
 # Report System — phase 2.1 reporting workflow
 
-Built with **HTML + CSS + vanilla JavaScript ES modules**, without React or a frontend build system. The previous application code has been removed from the repository; the migration utility reads V1 browser data if present.
+Built with **HTML + CSS + vanilla JavaScript ES modules**, without React or a frontend build system. Previous V1 application code and the obsolete migration action have been removed. Existing browser data is not deleted.
 
 ## Run locally
 
@@ -20,7 +20,7 @@ The browser app now has three focused screens:
 2. **إدخال البيانات** — configure periods and metrics, then enter or import source values.
 3. **عرض التقرير** — review KPIs, chart/table sections, warnings, and print PDF.
 
-The data-entry screen uses an editable **month-by-period table**, with metric tabs and horizontally scrollable columns for large comparisons. Navigation stays on the same origin without reloading the app. Saved reports are mirrored to IndexedDB as a complete library for recovery; per-report localStorage records are also retained. The library can be backed up and restored using JSON. Period-to-period changes are not calculated when either selected period is incomplete or their month counts differ.
+The data-entry screen uses an editable **month-by-period table**, with metric tabs and horizontally scrollable columns for large comparisons. Navigation stays on the same origin without reloading the app. Saved reports are mirrored to IndexedDB as a complete library for recovery; per-report localStorage records are also retained. The library can be backed up and restored using JSON. A full-library backup contains all currently edited reports; restoring it checks the JSON and commits the library to IndexedDB before changing visible reports. Period-to-period changes are not calculated when either selected period is incomplete or their month counts differ.
 
 ## Available features
 
@@ -31,7 +31,7 @@ The data-entry screen uses an editable **month-by-period table**, with metric ta
 - Manual monthly values, missing-data warnings, multi-metric totals and comparison percentages against the first period.
 - Import/export UTF-8 CSV in long format: `period,year,month,metric,value`. The `period` column is optional for import. Period names distinguish multiple periods within the same year.
 - Import first-sheet XLSX or wide CSV with `Year,Month,Calls,Answered` or `Date,Orders` and arbitrary metric columns; Arabic `السنة`, `الشهر`, Arabic numerals and Arabic month names are also supported.
-- Multiple saved reports (create, duplicate, switch, delete), JSON backup of the active report or the whole library, local browser storage, and print / Save to PDF.
+- Multiple saved reports (create, duplicate, switch, delete), versioned JSON backups, full-library restore from the downloaded backup, local browser storage, and print / Save to PDF.
 - No third-party runtime scripts, external CDN, backend or login.
 
 ## Limitations and caveats
@@ -42,7 +42,6 @@ The data-entry screen uses an editable **month-by-period table**, with metric ta
 - Drafts are saved to `localStorage` and mirrored to IndexedDB where available; backup JSON remains recommended. Another browser or origin does not share them.
 - Current PDF uses browser print and is not visually certified across browsers.
 - GitHub Actions runs engine, CSV and Chromium browser regression tests; accessibility and multi-browser audits are not complete.
-- V1 reports can be migrated **on demand** using “استيراد تقارير V1” when both apps share an origin. Original V1 browser data remains untouched; legacy rate KPI metadata is preserved, not falsely recomputed.
 - The app is designed for nonnegative measures; rates, negative financial values and computed metrics need additional metric types.
 
 ## Testing

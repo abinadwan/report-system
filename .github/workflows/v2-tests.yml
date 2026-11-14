@@ -27,7 +27,7 @@ jobs:
           node --check js/csv.js
           node --check js/xlsx.js
           node --check js/storage.js
-          node --check js/migrate.js
+          node --check js/library-backup.js
           node --check js/app-v3.js
       - name: Engine regression tests
         run: node --test tests/*.test.js

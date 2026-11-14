@@ -1,3 +1,4 @@
+import {readFile} from "node:fs/promises";
 import {execFileSync} from "node:child_process";
 import {test,expect} from "@playwright/test";
 
@@ -89,17 +90,6 @@ test("Excel XLSX first sheet imports wide-format metrics",async ({page})=>{
  await expect(page.locator("#summaryCards .metric strong")).toContainText("٤٤");
 });
 
-test("legacy report migration preserves V1 and creates V2 report",async ({page})=>{
- await page.locator("#nav-library").click();
- const old={id:"original",name:"سجل قديم",general:{title:"تقرير البيانات القديم"},calls2025:[10,20],q1_2026:{jan:30,feb:40,mar:50},kpis:{answerRate2026:96}};
- await page.evaluate(value=>localStorage.setItem("report_builder_reports_v3",JSON.stringify([value])),old);
- page.on("dialog",dialog=>dialog.accept());
- await page.locator("#migrateV1").click();
- await expect(page.locator("#reportSelect option")).toHaveCount(2);
- await expect(page.locator("#title")).toHaveValue("تقرير البيانات القديم");
- const original=await page.evaluate(()=>JSON.parse(localStorage.getItem("report_builder_reports_v3")));
- expect(original[0].id).toBe("original");
-});
 
 test("report sections can be reordered and saved",async ({page})=>{
  const rows=page.locator("#sectionOrder .section-order-row");
@@ -154,16 +144,54 @@ test("switching input metric tabs preserves previous values",async ({page})=>{
  await expect(page.locator("#dataEditors [data-entry]").first()).toHaveValue("75");
 });
 
-test("full library JSON restore replaces the current reports with explicit consent",async ({page})=>{
- await page.locator("#title").fill("محفوظ سابقًا");
+test("backup button download restores all reports and their values after deletion and reload",async ({page})=>{
+ await page.locator("#title").fill("التقرير الأول");
+ await page.locator("#dataEditors [data-entry]").first().fill("123");
  await page.locator("#save").click();
- const backup=await page.evaluate(()=>JSON.stringify({schemaVersion:3,reports:JSON.parse(localStorage.getItem("report-system-v2-library"))}));
  await page.locator("#nav-library").click();
  await page.locator("#newReport").click();
+ await page.locator("#title").fill("التقرير الثاني");
+ await page.locator("#dataEditors [data-entry]").first().fill("456");
+ await page.locator("#save").click();
  await page.locator("#nav-library").click();
- await expect(page.locator("#reportCards .report-card")).toHaveCount(2);
+
+ // Use the real downloaded file rather than fabricating the JSON structure.
+ const [download]=await Promise.all([
+  page.waitForEvent("download"),
+  page.locator("#backupAll").click()
+ ]);
+ const backup=await readFile(await download.path());
+ const parsed=JSON.parse(backup.toString("utf8"));
+ expect(parsed.schemaVersion).toBe(3);
+ expect(parsed.reports).toHaveLength(2);
+ expect(parsed.reports.map(r=>r.title)).toEqual(["التقرير الأول","التقرير الثاني"]);
+
  page.on("dialog",dialog=>dialog.accept());
- await page.locator("#restoreAll").setInputFiles({name:"library.json",mimeType:"application/json",buffer:Buffer.from(backup)});
+ await page.locator("#deleteReport").click();
  await expect(page.locator("#reportCards .report-card")).toHaveCount(1);
- await expect(page.locator("#reportCards")).toContainText("محفوظ سابقًا");
+ await page.locator("#restoreAll").setInputFiles({
+   name:"report-system-library-backup.json",mimeType:"application/json",buffer:backup
+ });
+ await expect(page.locator("#libraryStatus")).toContainText("تمت استعادة 2 تقرير");
+ await expect(page.locator("#reportCards .report-card")).toHaveCount(2);
+ await page.reload();
+ await expect(page.locator("#reportCards .report-card")).toHaveCount(2);
+ for(const [name,value] of [["التقرير الأول","123"],["التقرير الثاني","456"]]){
+  await page.locator("#reportCards .report-card").filter({hasText:name}).click();
+  await expect(page.locator("#title")).toHaveValue(name);
+  await expect(page.locator("#dataEditors [data-entry]").first()).toHaveValue(value);
+  await page.locator("#nav-library").click();
+ }
+});
+
+test("invalid library backup does not replace existing reports",async ({page})=>{
+ await page.locator("#title").fill("يبقى محفوظًا");
+ await page.locator("#save").click();
+ await page.locator("#nav-library").click();
+ await page.locator("#restoreAll").setInputFiles({
+  name:"invalid.json",mimeType:"application/json",
+  buffer:Buffer.from(JSON.stringify({schemaVersion:3,reports:[]}))
+ });
+ await expect(page.locator("#libraryStatus")).toContainText("فشلت الاستعادة");
+ await expect(page.locator("#reportCards")).toContainText("يبقى محفوظًا");
 });

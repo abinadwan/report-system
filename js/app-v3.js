@@ -2,7 +2,7 @@ import {MONTHS,PRESETS,TEMPLATES,uid,metric,period,newReport,applyTemplate,valid
 import {parseCSV,readFlexibleFormat,encodeCSV} from "./csv.js";
 import {writeDraft,readDraft,writeLibrary,readLibrary} from "./storage.js";
 import {readXLSX} from "./xlsx.js";
-import {migrateLegacyReports} from "./migrate.js";
+import {makeLibraryBackup,parseLibraryBackup} from "./library-backup.js";
 const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 const KEY="report-system-v2-v3-draft";
@@ -213,7 +213,10 @@ $("dataEditors").addEventListener("input",e=>{
  report.entries[e.target.dataset.entry]=raw===""?null:Number(raw);draw();scheduleSave();
 });
 function download(name,content,type){
- const url=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ const url=URL.createObjectURL(new Blob([content],{type}));
+ const a=document.createElement("a");a.href=url;a.download=name;
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
 $("downloadCsv").onclick=()=>{
  try{
@@ -256,35 +259,49 @@ $("startNewReport").onclick=newReportAndOpen;
 $("duplicateReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");saveDraft();report=structuredClone(report);report.id=uid();report.title+=" (نسخة)";library.push(report);rerender();};
 $("deleteReport").onclick=()=>{if(!confirm("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);const deletedId=report.id;library=library.filter(r=>r.id!==deletedId);try{localStorage.removeItem("report-system-v2-record:"+deletedId);}catch{}if(!library.length){report=newReport();report.id=uid();library=[report];}else report=library[0];rerender();};
 $("reportSelect").onchange=e=>{const selectedId=e.target.value;saveDraft();const selected=library.find(r=>r.id===selectedId);if(selected){report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();}};
-$("backupAll").onclick=()=>{try{library.forEach(validate);download("report-system-v2-library.json",JSON.stringify({schemaVersion:3,reports:library},null,2),"application/json");}catch(e){status(e.message);}};
+$("backupAll").onclick=()=>{
+ try{
+  const json=makeLibraryBackup(library,report);
+  // Validate the exact contents of the file before offering it for download.
+  parseLibraryBackup(json);
+  download("report-system-library-backup.json",json,"application/json;charset=utf-8");
+  status("تم تجهيز نسخة احتياطية تضم "+library.length+" تقريرًا. احتفظ بالملف خارج المتصفح.");
+ }catch(e){status("تعذر إعداد النسخة الاحتياطية: "+e.message);}
+};
+let restoringLibrary=false;
 $("restoreAll").onchange=async e=>{
- const file=e.target.files?.[0];e.target.value="";if(!file)return;
+ const file=e.target.files?.[0];e.target.value="";if(!file||restoringLibrary)return;
+ restoringLibrary=true;
  try{
   if(file.size>8*1024*1024)throw Error("النسخة الاحتياطية أكبر من 8 ميجابايت.");
-  const backup=JSON.parse(await file.text());
-  if(backup?.schemaVersion!==3||!Array.isArray(backup.reports)||!backup.reports.length||backup.reports.length>100)throw Error("ملف المكتبة غير صالح.");
-  const ids=new Set();
-  const restored=backup.reports.map(item=>{
-   validate(item);
-   if(typeof item.id!=="string"||!item.id||ids.has(item.id))throw Error("معرّفات التقارير غير صالحة أو مكررة.");
-   ids.add(item.id);return item;
-  });
-  if(!confirm("استعادة "+restored.length+" تقريرًا ستستبدل مكتبتك الحالية بالكامل. هل تريد المتابعة؟"))return;
-  library=restored;report=library[0];rerender();saveDraft();showView("library");
-  status("تم استعادة "+library.length+" تقريرًا. احتفظ بنسخة احتياطية.");
- }catch(err){status("تعذر استعادة المكتبة: "+err.message);}
-};
-$("migrateV1").onclick=()=>{
- try{
-  const old=JSON.parse(localStorage.getItem("report_builder_reports_v3")||"[]");
-  if(!Array.isArray(old)||!old.length)return status("لا توجد تقارير V1 محفوظة في هذا المتصفح.");
-  const existing=new Set(library.map(r=>r.legacyId).filter(Boolean));
-  const migrated=migrateLegacyReports(old).filter(r=>!r.legacyId||!existing.has(r.legacyId));
-  if(!migrated.length)return status("جميع التقارير القديمة موجودة بالفعل.");
-  if(library.length+migrated.length>100)return status("تجاوزت التقارير الحد الأقصى للمكتبة.");
-  if(!confirm("استيراد "+migrated.length+" تقريرًا من V1؟ ستظل بيانات V1 الأصلية دون تعديل."))return;
-  saveDraft();library.push(...migrated);report=migrated[0];rerender();status("تم ترحيل "+migrated.length+" تقريرًا. احتفظ بنسخة احتياطية.");
- }catch(e){status("تعذر ترحيل V1: "+e.message);}
+  const restored=parseLibraryBackup(await file.text());
+  if(!confirm("سيتم استبدال "+library.length+" تقريرًا حاليًا بـ "+restored.length+" تقريرًا من النسخة الاحتياطية. تأكد من حفظ نسخة من التقارير الحالية أولًا. هل تتابع؟"))return;
+  // Cancel any pending autosave of the old library, and commit the new library
+  // before showing a success message or changing the visible report.
+  clearTimeout(saveTimer);
+  await writeLibrary(restored);
+  const previousIds=library.map(item=>item.id);
+  library=restored;
+  report=restored[0];
+  let localSaved=true;
+  try{
+   localStorage.setItem(LIBRARY_KEY,JSON.stringify(restored));
+   localStorage.setItem(KEY,JSON.stringify(report));
+   localStorage.setItem(ACTIVE_KEY,report.id);
+   for(const entry of restored)localStorage.setItem("report-system-v2-record:"+entry.id,JSON.stringify(entry));
+   for(const id of previousIds)if(!restored.some(entry=>entry.id===id))localStorage.removeItem("report-system-v2-record:"+id);
+  }catch(storageError){
+   localSaved=false;
+   // Avoid reading a stale library index on the next page load.
+   try{localStorage.removeItem(LIBRARY_KEY);}catch{}
+  }
+  writeDraft(structuredClone(report)).catch(()=>{});
+  syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();showView("library");
+  status(localSaved?
+   "تمت استعادة "+restored.length+" تقريرًا من النسخة الاحتياطية بنجاح.":
+   "تمت الاستعادة في IndexedDB، لكن مساحة التخزين الأخرى ممتلئة. احتفظ بملف النسخة الاحتياطية.");
+ }catch(err){status("فشلت الاستعادة ولم تُستبدل المكتبة: "+err.message);}
+ finally{restoringLibrary=false;}
 };
 document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>{
   if(button.dataset.view==="preview")openPreview();
