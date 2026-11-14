@@ -14,7 +14,7 @@ test("user can create three years and several metrics",async ({page})=>{
  await expect(page.locator("#periodEditors .period-card")).toHaveCount(3);
  await page.locator("#periodEditors .period-card").nth(2).locator('[data-field="year"]').fill("2024");
  await page.locator("#periodEditors .period-card").nth(2).locator('[data-field="year"]').dispatchEvent("change");
- await expect(page.locator("#dataEditors .data-block")).toHaveCount(3);
+ await expect(page.locator("#dataEditors .entry-table thead th")).toHaveCount(4);
  await expect(page.locator("#summaryCards .metric")).toHaveCount(6);
 });
 
@@ -28,11 +28,11 @@ test("month selection preserves nonconsecutive custom months",async ({page})=>{
 });
 
 test("manual input updates preview and survives reload",async ({page})=>{
- await page.locator("#dataEditors .data-block").first().locator('[data-entry]').first().fill("25");
+ await page.locator("#dataEditors [data-entry]").first().fill("25");
  await expect(page.locator("#summaryCards .metric").first().locator("strong")).toContainText("٢٥");
  await page.locator("#save").click();
  await page.reload();
- await expect(page.locator("#dataEditors .data-block").first().locator('[data-entry]').first()).toHaveValue("25");
+ await expect(page.locator("#dataEditors [data-entry]").first()).toHaveValue("25");
 });
 
 test("malicious markup in title is rendered as text",async ({page})=>{
@@ -51,21 +51,25 @@ test("CSV import creates periods and metrics dynamically",async ({page})=>{
 });
 
 test("multiple saved reports can be created and switched without losing data",async ({page})=>{
- await page.locator("#nav-library").click();
  await page.locator("#title").fill("الأول");
  await page.locator("#save").click();
+ await page.locator("#nav-library").click();
  await page.locator("#newReport").click();
+ await expect(page.locator("#view-data")).toBeVisible();
  await page.locator("#title").fill("الثاني");
  await page.locator("#save").click();
+ await page.locator("#nav-library").click();
  await expect(page.locator("#reportSelect option")).toHaveCount(2);
  await page.locator("#reportSelect").selectOption({index:0});
+ await page.locator("#nav-data").click();
  await expect(page.locator("#title")).toHaveValue("الأول");
+ await page.locator("#nav-library").click();
  await page.locator("#reportSelect").selectOption({index:1});
+ await page.locator("#nav-data").click();
  await expect(page.locator("#title")).toHaveValue("الثاني");
  await page.reload();
  await expect(page.locator("#reportSelect option")).toHaveCount(2);
 });
-
 test("Excel XLSX first sheet imports wide-format metrics",async ({page})=>{
  page.on("dialog",dialog=>dialog.accept());
  const workbook='<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets><sheet name="Sheet1" sheetId="1"/></sheets></workbook>';
@@ -139,4 +143,13 @@ test("recovers full library from IndexedDB after localStorage loss",async ({page
  await page.evaluate(()=>localStorage.clear());
  await page.reload();
  await expect(page.locator("#reportSelect option")).toHaveCount(2);
+});
+
+test("switching input metric tabs preserves previous values",async ({page})=>{
+ await page.locator("#addMetric").click();
+ await page.locator("#dataEditors [data-entry]").first().fill("75");
+ await page.locator("#dataEditors [data-metric-tab]").nth(1).click();
+ await expect(page.locator("#dataEditors [data-entry]").first()).toHaveValue("");
+ await page.locator("#dataEditors [data-metric-tab]").first().click();
+ await expect(page.locator("#dataEditors [data-entry]").first()).toHaveValue("75");
 });
