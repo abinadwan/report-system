@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {newReport,period,metric,calc,validate,comparison,keyOf,PRESETS,applyTemplate} from "../js/engine.js";
-import {parseCSV,readLongFormat,encodeCSV} from "../js/csv.js";
+import {parseCSV,readLongFormat,readFlexibleFormat,encodeCSV} from "../js/csv.js";
 
 test("three-year, two-metric comparison",()=>{
  const r=newReport();
@@ -52,4 +52,22 @@ test("CSV named periods keep overlapping years distinct",()=>{
 test("CSV rejects invalid numeric values",()=>{
  assert.throws(()=>readLongFormat(parseCSV("year,month,metric,value\n2026,1,Calls,-1")),/القيمة/);
  assert.throws(()=>parseCSV('year,month,metric,value\n"2026,1,Calls,30'),/مغلق/);
+});
+
+test("wide CSV accepts user-defined metric columns",()=>{
+ const rows=parseCSV("Year,Month,Calls,Answered\n2025,1,100,90\n2025,2,120,110");
+ const result=readFlexibleFormat(rows);
+ assert.equal(result.length,4);
+ assert.deepEqual(result.map(x=>x.metric),["Calls","Answered","Calls","Answered"]);
+ assert.equal(result[3].value,110);
+});
+test("Arabic CSV headers and Arabic month names work",()=>{
+ const rows=parseCSV("السنة,الشهر,المعاملات\n٢٠٢٦,يناير,٣٠\n٢٠٢٦,فبراير,٤٥");
+ const result=readFlexibleFormat(rows);
+ assert.deepEqual(result.map(x=>x.month),[1,2]);
+ assert.deepEqual(result.map(x=>x.value),[30,45]);
+});
+test("ISO monthly date column is accepted",()=>{
+ const rows=parseCSV("Date,Orders\n2027-03,42\n2027-04-12,25");
+ assert.deepEqual(readFlexibleFormat(rows).map(x=>x.month),[3,4]);
 });
