@@ -113,7 +113,7 @@ $("downloadCsv").onclick=()=>{
   const rows=[];
   for(const p of report.periods)for(const month of p.months)for(const m of report.metrics){
    const value=report.entries[keyOf(p.id,month,m.id)];
-   if(value!==undefined&&value!==null&&value!=="")rows.push({year:p.year,month,metric:m.name,value});
+   if(value!==undefined&&value!==null&&value!=="")rows.push({period:p.name||p.id,year:p.year,month,metric:m.name,value});
   }
   download("report-data.csv","\uFEFF"+encodeCSV(rows),"text/csv;charset=utf-8");status("تم إعداد CSV. لا يتضمن الأشهر الفارغة.");
  }catch(e){status(e.message);}
@@ -123,15 +123,15 @@ $("importCsv").onchange=async e=>{
  try{
   if(file.size>4*1024*1024)throw Error("حجم CSV يتجاوز 4 ميجابايت.");
   const data=readLongFormat(parseCSV(await file.text()));
-  const seen=new Set();for(const r of data){const k=JSON.stringify([r.year,r.month,r.metric]);if(seen.has(k))throw Error("صف مكرر لنفس السنة والشهر والمؤشر.");seen.add(k);}
-  const years=[...new Set(data.map(r=>r.year))].sort();
+  const seen=new Set();for(const r of data){const k=JSON.stringify([r.period,r.year,r.month,r.metric]);if(seen.has(k))throw Error("صف مكرر لنفس السنة والشهر والمؤشر.");seen.add(k);}
+  const keys=[...new Set(data.map(r=>JSON.stringify([r.period,r.year])))];
   const names=[...new Set(data.map(r=>r.metric))];
-  if(years.length>100||names.length>30)throw Error("الملف يتجاوز الحد الأقصى للفترات أو المؤشرات.");
+  if(keys.length>100||names.length>30)throw Error("الملف يتجاوز الحد الأقصى للفترات أو المؤشرات.");
   if(!confirm("سيستبدل الاستيراد الفترات والمؤشرات والقيم الحالية. هل تريد المتابعة؟"))return;
-  const periods=years.map(year=>({...period(year),months:[...new Set(data.filter(r=>r.year===year).map(r=>r.month))].sort((a,b)=>a-b)}));
+  const periods=keys.map(k=>{const [name,year]=JSON.parse(k);return {...period(year),name,months:[...new Set(data.filter(r=>r.year===year&&r.period===name).map(r=>r.month))].sort((a,b)=>a-b)};});
   const metrics=names.map(name=>metric(name,"","sum"));
   const entries={};
-  for(const r of data){const p=periods.find(p=>p.year===r.year),m=metrics.find(m=>m.name===r.metric);entries[keyOf(p.id,r.month,m.id)]=r.value;}
+  for(const r of data){const p=periods.find(p=>p.year===r.year&&p.name===r.period),m=metrics.find(m=>m.name===r.metric);entries[keyOf(p.id,r.month,m.id)]=r.value;}
   const next={...report,periods,metrics,entries};
   validate(next);report=next;rerender();status("استوردت "+data.length+" قيمة.");
  }catch(err){status("تعذر استيراد CSV: "+err.message);}
