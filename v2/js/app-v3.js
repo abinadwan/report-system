@@ -7,10 +7,11 @@ const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 const KEY="report-system-v2-v3-draft";
 const LIBRARY_KEY="report-system-v2-library";
+const ACTIVE_KEY="report-system-v2-active";
 let report=restoreDraft(),saveTimer;
 report.id ||= uid();
 let library=loadLibrary();
-if(library.length){report=library[0];}else{library=[report];}
+if(library.length){report=library.find(r=>r.id===localStorage.getItem(ACTIVE_KEY))||library[0];}else{library=[report];}
 function loadLibrary(){try{const parsed=JSON.parse(localStorage.getItem(LIBRARY_KEY));if(Array.isArray(parsed)&&parsed.length&&parsed.length<=100){return parsed.map(r=>{validate(r);if(typeof r.id!=="string"||!r.id)throw Error("Invalid report ID");return r;});}}catch(e){console.warn("Library recovery failed",e);}return [];}
 function renderLibrary(){const selector=$("reportSelect");selector.innerHTML=library.map(r=>`<option value="${escapeHTML(r.id)}">${escapeHTML(r.title||"تقرير بدون عنوان")}</option>`).join("");selector.value=report.id;}
 function restoreDraft(){try{const v=JSON.parse(localStorage.getItem(KEY));return validate(v);}catch{return newReport();}}
@@ -18,6 +19,7 @@ function status(text){$("status").textContent=text;}
 function saveDraft(){try{validate(report);localStorage.setItem(KEY,JSON.stringify(report));
  const idx=library.findIndex(r=>r.id===report.id);if(idx<0)library.push(report);else library[idx]=report;
  localStorage.setItem(LIBRARY_KEY,JSON.stringify(library));
+ localStorage.setItem(ACTIVE_KEY,report.id);
  writeDraft(structuredClone(report)).catch(()=>{});renderLibrary();status("تم الحفظ على هذا المتصفح.");}catch(e){status("تعذر الحفظ: "+e.message);}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveDraft,650);}
 function syncTop(){$("title").value=report.title;$("kind").value=report.kind;$("template").value=report.template;document.querySelectorAll("[data-section]").forEach(el=>el.checked=report.sections.includes(el.dataset.section));}
