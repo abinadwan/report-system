@@ -4,10 +4,19 @@ import {writeDraft,readDraft} from "./storage.js";
 const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 const KEY="report-system-v2-v3-draft";
+const LIBRARY_KEY="report-system-v2-library";
 let report=restoreDraft(),saveTimer;
+report.id ||= uid();
+let library=loadLibrary();
+if(library.length){report=library[0];}else{library=[report];}
+function loadLibrary(){try{const parsed=JSON.parse(localStorage.getItem(LIBRARY_KEY));if(Array.isArray(parsed)&&parsed.length&&parsed.length<=100){return parsed.map(r=>{validate(r);if(typeof r.id!=="string"||!r.id)throw Error("Invalid report ID");return r;});}}catch(e){console.warn("Library recovery failed",e);}return [];}
+function renderLibrary(){const selector=$("reportSelect");selector.innerHTML=library.map(r=>`<option value="${escapeHTML(r.id)}">${escapeHTML(r.title||"تقرير بدون عنوان")}</option>`).join("");selector.value=report.id;}
 function restoreDraft(){try{const v=JSON.parse(localStorage.getItem(KEY));return validate(v);}catch{return newReport();}}
 function status(text){$("status").textContent=text;}
-function saveDraft(){try{validate(report);localStorage.setItem(KEY,JSON.stringify(report));writeDraft(structuredClone(report)).catch(()=>{});status("تم الحفظ على هذا المتصفح.");}catch(e){status("تعذر الحفظ: "+e.message);}}
+function saveDraft(){try{validate(report);localStorage.setItem(KEY,JSON.stringify(report));
+ const idx=library.findIndex(r=>r.id===report.id);if(idx<0)library.push(report);else library[idx]=report;
+ localStorage.setItem(LIBRARY_KEY,JSON.stringify(library));
+ writeDraft(structuredClone(report)).catch(()=>{});renderLibrary();status("تم الحفظ على هذا المتصفح.");}catch(e){status("تعذر الحفظ: "+e.message);}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveDraft,650);}
 function syncTop(){$("title").value=report.title;$("kind").value=report.kind;$("template").value=report.template;document.querySelectorAll("[data-section]").forEach(el=>el.checked=report.sections.includes(el.dataset.section));}
 function presetOf(p){if(p.scope==="custom")return "custom";return Object.entries(PRESETS).find(([,months])=>months.length===p.months.length&&months.every(m=>p.months.includes(m)))?.[0]||"custom";}
@@ -64,10 +73,7 @@ function draw(){
  if(report.metrics.some(m=>m.method==="average"))warnings.push("متوسط الأشهر غير مرجح؛ لا تستخدمه لحساب نسب تشغيلية مجمعة مثل معدل الإجابة.");
  $("warnings").textContent=warnings.join(" ");
 }
-function rerender(){syncTop();renderMetrics();renderPeriods();renderData();draw();
-if(!localStorage.getItem(KEY)){
- readDraft().then(saved=>{if(saved&&!localStorage.getItem(KEY)){report=validate(saved);syncTop();renderMetrics();renderPeriods();renderData();draw();status("تم استرداد المسودة من قاعدة البيانات المحلية.");}}).catch(()=>{});
-}scheduleSave();}
+function rerender(){syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();scheduleSave();}
 function changeTop(id,property){$(id).addEventListener("input",e=>{report[property]=e.target.value;draw();scheduleSave();});}
 changeTop("title","title");changeTop("kind","kind");
 $("template").addEventListener("change",e=>{
@@ -156,6 +162,14 @@ $("restore").onchange=async e=>{
  const file=e.target.files?.[0];e.target.value="";if(!file)return;
  try{if(file.size>5*1024*1024)throw Error("الملف كبير جدًا.");const data=validate(JSON.parse(await file.text()));if(!confirm("استبدال التقرير الحالي بالنسخة الاحتياطية؟"))return;report=data;rerender();status("تم استيراد النسخة.");}catch(err){status("تعذر الاستيراد: "+err.message);}
 };
-$("clear").onclick=()=>{if(!confirm("سيتم استبدال المسودة الحالية. هل حفظت نسخة احتياطية؟"))return;report=newReport();rerender();};
+$("clear").onclick=()=>{if(!confirm("سيتم مسح محتوى التقرير الحالي. هل حفظت نسخة احتياطية؟"))return;const id=report.id;report=newReport();report.id=id;rerender();};
+$("newReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");saveDraft();report=newReport();report.id=uid();library.push(report);rerender();};
+$("duplicateReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");saveDraft();report=structuredClone(report);report.id=uid();report.title+=" (نسخة)";library.push(report);rerender();};
+$("deleteReport").onclick=()=>{if(!confirm("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);library=library.filter(r=>r.id!==report.id);if(!library.length){report=newReport();report.id=uid();library=[report];}else report=library[0];rerender();};
+$("reportSelect").onchange=e=>{saveDraft();const selected=library.find(r=>r.id===e.target.value);if(selected){report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();}};
+$("backupAll").onclick=()=>{try{library.forEach(validate);download("report-system-v2-library.json",JSON.stringify({schemaVersion:3,reports:library},null,2),"application/json");}catch(e){status(e.message);}};
 $("print").onclick=()=>{try{validate(report);window.print();}catch(e){status(e.message);}};
-syncTop();renderMetrics();renderPeriods();renderData();draw();
+syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();
+if(!localStorage.getItem(KEY)){
+ readDraft().then(saved=>{if(saved&&!localStorage.getItem(KEY)){report=validate(saved);report.id ||= uid();library=[report];syncTop();renderMetrics();renderPeriods();renderData();draw();renderLibrary();status("تم استرداد المسودة من قاعدة البيانات المحلية.");}}).catch(()=>{});
+}
