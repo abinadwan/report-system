@@ -1,3 +1,4 @@
+import {execFileSync} from "node:child_process";
 import {test,expect} from "@playwright/test";
 
 test.beforeEach(async ({page})=>{
@@ -61,4 +62,16 @@ test("multiple saved reports can be created and switched without losing data",as
  await expect(page.locator("#title")).toHaveValue("الثاني");
  await page.reload();
  await expect(page.locator("#reportSelect option")).toHaveCount(2);
+});
+
+test("Excel XLSX first sheet imports wide-format metrics",async ({page})=>{
+ page.on("dialog",dialog=>dialog.accept());
+ const workbook='<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets><sheet name="Sheet1" sheetId="1"/></sheets></workbook>';
+ const sheet='<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Year</t></is></c><c r="B1" t="inlineStr"><is><t>Month</t></is></c><c r="C1" t="inlineStr"><is><t>Calls</t></is></c></row><row r="2"><c r="A2"><v>2025</v></c><c r="B2"><v>1</v></c><c r="C2"><v>44</v></c></row></sheetData></worksheet>';
+ const python='import io,zipfile,sys\\nb=io.BytesIO()\\nwith zipfile.ZipFile(b,"w",zipfile.ZIP_DEFLATED) as z:\\n z.writestr("xl/workbook.xml",sys.argv[1])\\n z.writestr("xl/worksheets/sheet1.xml",sys.argv[2])\\nsys.stdout.buffer.write(b.getvalue())';
+ const buffer=execFileSync("python3",["-c",python.replaceAll("\\\\n","\\n"),workbook,sheet]);
+ await page.locator("#importCsv").setInputFiles({name:"data.xlsx",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",buffer});
+ await expect(page.locator("#metricEditors .period-card")).toHaveCount(1);
+ await expect(page.locator("#periodEditors .period-card")).toHaveCount(1);
+ await expect(page.locator("#summaryCards .metric strong")).toContainText(["٤٤"]);
 });
