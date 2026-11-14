@@ -1,6 +1,6 @@
 import {MONTHS,PRESETS,TEMPLATES,uid,metric,period,newReport,applyTemplate,validate,calc,comparison,format,keyOf} from "./engine.js";
 import {parseCSV,readFlexibleFormat,encodeCSV} from "./csv.js";
-import {writeDraft,readDraft} from "./storage.js";
+import {writeDraft,readDraft,writeLibrary,readLibrary} from "./storage.js";
 import {readXLSX} from "./xlsx.js";
 import {migrateLegacyReports} from "./migrate.js";
 const $=id=>document.getElementById(id);
@@ -12,7 +12,22 @@ let report=restoreDraft(),saveTimer;
 report.id ||= uid();
 let library=loadLibrary();
 if(library.length){report=library.find(r=>r.id===localStorage.getItem(ACTIVE_KEY))||library[0];}else{library=[report];}
-function loadLibrary(){try{const parsed=JSON.parse(localStorage.getItem(LIBRARY_KEY));if(Array.isArray(parsed)&&parsed.length&&parsed.length<=100){return parsed.map(r=>{validate(r);if(typeof r.id!=="string"||!r.id)throw Error("Invalid report ID");return r;});}}catch(e){console.warn("Library recovery failed",e);}return [];}
+function loadLibrary(){
+ try{
+  const parsed=JSON.parse(localStorage.getItem(LIBRARY_KEY));
+  if(Array.isArray(parsed)&&parsed.length&&parsed.length<=100){
+   const recovered=parsed.flatMap(item=>{try{validate(item);return typeof item.id==="string"&&item.id?[item]:[];}catch{return [];}});
+   if(recovered.length)return recovered;
+  }
+ }catch(e){console.warn("Local library recovery failed",e);}
+ // Each saved record is an independent fallback if the library index was corrupted.
+ const recovered=[];
+ for(let i=0;i<localStorage.length;i++){
+  const key=localStorage.key(i);if(!key?.startsWith("report-system-v2-record:"))continue;
+  try{const item=JSON.parse(localStorage.getItem(key));validate(item);if(typeof item.id==="string"&&item.id)recovered.push(item);}catch{}
+ }
+ return recovered.slice(0,100);
+}
 function renderLibrary(){const selector=$("reportSelect");selector.innerHTML=library.map(r=>`<option value="${escapeHTML(r.id)}">${escapeHTML(r.title||"تقرير بدون عنوان")}</option>`).join("");selector.value=report.id;renderLibraryCards();}
 const VIEWS=["library","data","preview"];
 function showView(name){
@@ -35,7 +50,7 @@ function renderLibraryCards(){
   </button>`).join("");
 }
 function openPreview(){
-  try{validate(report);saveDraft();draw();showView("preview");}
+  try{validate(report);if(!saveDraft())return;draw();showView("preview");}
   catch(e){showView("data");status("راجع البيانات قبل عرض المؤشرات: "+e.message);}
 }
 function newReportAndOpen(){
@@ -44,11 +59,23 @@ function newReportAndOpen(){
 }
 function restoreDraft(){try{const v=JSON.parse(localStorage.getItem(KEY));return validate(v);}catch{return newReport();}}
 function status(text){$("status").textContent=text;}
-function saveDraft(){try{validate(report);localStorage.setItem(KEY,JSON.stringify(report));
+function saveDraft(){
+ try{validate(report);}catch(e){status("راجع البيانات قبل الحفظ: "+e.message);return false;}
  const idx=library.findIndex(r=>r.id===report.id);if(idx<0)library.push(report);else library[idx]=report;
- localStorage.setItem(LIBRARY_KEY,JSON.stringify(library));
- localStorage.setItem(ACTIVE_KEY,report.id);
- writeDraft(structuredClone(report)).catch(()=>{});renderLibrary();status("تم الحفظ على هذا المتصفح.");}catch(e){status("تعذر الحفظ: "+e.message);}}
+ const snapshot=structuredClone(library);
+ // IndexedDB is independent of localStorage quota and stores all reports, not just the active draft.
+ writeLibrary(snapshot).catch(e=>status("تعذر تحديث النسخة الاحتياطية في قاعدة البيانات: "+e.message));
+ let localSaved=true;
+ try{
+  localStorage.setItem("report-system-v2-record:"+report.id,JSON.stringify(report));
+  localStorage.setItem(KEY,JSON.stringify(report));
+  localStorage.setItem(LIBRARY_KEY,JSON.stringify(library));
+  localStorage.setItem(ACTIVE_KEY,report.id);
+ }catch(e){localSaved=false;status("الحفظ المحلي ممتلئ؛ صدّر نسخة JSON وتحقق من حفظ IndexedDB.");}
+ writeDraft(structuredClone(report)).catch(()=>{});
+ renderLibrary();if(localSaved)status("تم الحفظ على هذا المتصفح.");
+ return true;
+}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveDraft,650);}
 function syncTop(){$("title").value=report.title;$("kind").value=report.kind;$("template").value=report.template;document.querySelectorAll("[data-section]").forEach(el=>el.checked=report.sections.includes(el.dataset.section));}
 function renderSections(){
@@ -213,7 +240,7 @@ $("clear").onclick=()=>{if(!confirm("سيتم مسح محتوى التقرير �
 $("newReport").onclick=newReportAndOpen;
 $("startNewReport").onclick=newReportAndOpen;
 $("duplicateReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");saveDraft();report=structuredClone(report);report.id=uid();report.title+=" (نسخة)";library.push(report);rerender();};
-$("deleteReport").onclick=()=>{if(!confirm("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);library=library.filter(r=>r.id!==report.id);if(!library.length){report=newReport();report.id=uid();library=[report];}else report=library[0];rerender();};
+$("deleteReport").onclick=()=>{if(!confirm("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);const deletedId=report.id;library=library.filter(r=>r.id!==deletedId);try{localStorage.removeItem("report-system-v2-record:"+deletedId);}catch{}if(!library.length){report=newReport();report.id=uid();library=[report];}else report=library[0];rerender();};
 $("reportSelect").onchange=e=>{const selectedId=e.target.value;saveDraft();const selected=library.find(r=>r.id===selectedId);if(selected){report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();}};
 $("backupAll").onclick=()=>{try{library.forEach(validate);download("report-system-v2-library.json",JSON.stringify({schemaVersion:3,reports:library},null,2),"application/json");}catch(e){status(e.message);}};
 $("migrateV1").onclick=()=>{
@@ -245,7 +272,21 @@ $("reportCards").addEventListener("click",e=>{
 });
 $("print").onclick=()=>{try{validate(report);window.print();}catch(e){status(e.message);}};
 syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
-if(!localStorage.getItem(KEY)){
- readDraft().then(saved=>{if(saved&&!localStorage.getItem(KEY)){report=validate(saved);report.id ||= uid();library=[report];syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
-showView(location.hash.replace("#","")||"library");status("تم استرداد المسودة من قاعدة البيانات المحلية.");}}).catch(()=>{});
+showView(location.hash.replace("#","")||"library");
+// Recover the complete library from IndexedDB if localStorage was cleared or corrupted.
+const needsRecovery=loadLibrary().length===0;
+if(needsRecovery){
+ readLibrary().then(saved=>{
+  if(!Array.isArray(saved)||!saved.length)return;
+  const valid=saved.flatMap(item=>{try{validate(item);return typeof item.id==="string"&&item.id?[item]:[];}catch{return [];}});
+  if(!valid.length||loadLibrary().length)return;
+  library=valid.slice(0,100);
+  report=library.find(r=>r.id===localStorage.getItem(ACTIVE_KEY))||library[0];
+  syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
+  status("تم استرداد مكتبة التقارير من قاعدة البيانات المحلية.");
+ }).catch(()=>{});
+ // Older installations stored only the active draft.
+ readDraft().then(saved=>{if(!loadLibrary().length&&saved&&library.length===1){
+  report=validate(saved);report.id ||= uid();library=[report];syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
+ }}).catch(()=>{});
 }
