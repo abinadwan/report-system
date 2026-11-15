@@ -1,6 +1,6 @@
-import {MONTHS,PRESETS,TEMPLATES,uid,metric,period,newReport,applyTemplate,validate,calc,comparison,format,keyOf} from "./engine.js";
-import {parseCSV,readFlexibleFormat,encodeCSV} from "./csv.js";
-import {writeDraft,readDraft,writeLibrary,readLibrary} from "./storage.js";
+import {MONTHS,PRESETS,TEMPLATES,uid,metric,period,newReport,applyTemplate,validate,sanitize,calc,comparison,format,keyOf} from "./engine.js";
+import {parseCSV,readFlexibleFormat,encodeCSV,buildImportedData} from "./csv.js";
+import {writeDraft,eraseDraft,writeLibrary,readLibrary} from "./storage.js";
 import {readXLSX} from "./xlsx.js";
 import {makeLibraryBackup,parseLibraryBackup} from "./library-backup.js";
 import {locale,setLocale,startLocalization,translateText} from "./i18n.js";
@@ -12,18 +12,27 @@ function blankReport(){
  return result;
 }
 const ask=message=>window.confirm(translateText(message));
-const KEY="report-system-v2-v3-draft";
+// Drafts are namespaced per report so a stale draft can never replace another report's content.
+const DRAFT_PREFIX="report-system-v2-v3-draft:";
 const LIBRARY_KEY="report-system-v2-library";
 const ACTIVE_KEY="report-system-v2-active";
-let report=restoreDraft(),saveTimer;
-report.id ||= uid();
+function restoreDraft(id){try{const v=sanitize(JSON.parse(localStorage.getItem(DRAFT_PREFIX+id)));return v?.id===id?validate(v):null;}catch{return null;}}
+let report=blankReport();report.id=uid();
+let saveTimer;
 let library=loadLibrary();
-if(library.length){report=library.find(r=>r.id===localStorage.getItem(ACTIVE_KEY))||library[0];}else{library=[report];}
+if(library.length){
+ const activeId=localStorage.getItem(ACTIVE_KEY);
+ const stored=library.find(r=>r.id===activeId)||library[0];
+ // Open reports are deep copies; the library entry is only touched by explicit saves.
+ report=structuredClone(stored);
+ const draft=restoreDraft(report.id);
+ if(draft)report=draft;
+}else{library=[structuredClone(report)];}
 function loadLibrary(){
  try{
   const parsed=JSON.parse(localStorage.getItem(LIBRARY_KEY));
   if(Array.isArray(parsed)&&parsed.length&&parsed.length<=100){
-   const recovered=parsed.flatMap(item=>{try{validate(item);return typeof item.id==="string"&&item.id?[item]:[];}catch{return [];}});
+   const recovered=parsed.flatMap(item=>{try{const clean=sanitize(item);validate(clean);return typeof clean.id==="string"&&clean.id?[clean]:[];}catch{return [];}});
    if(recovered.length)return recovered;
   }
  }catch(e){console.warn("Local library recovery failed",e);}
@@ -31,7 +40,7 @@ function loadLibrary(){
  const recovered=[];
  for(let i=0;i<localStorage.length;i++){
   const key=localStorage.key(i);if(!key?.startsWith("report-system-v2-record:"))continue;
-  try{const item=JSON.parse(localStorage.getItem(key));validate(item);if(typeof item.id==="string"&&item.id)recovered.push(item);}catch{}
+  try{const item=sanitize(JSON.parse(localStorage.getItem(key)));validate(item);if(typeof item.id==="string"&&item.id)recovered.push(item);}catch{}
  }
  return recovered.slice(0,100);
 }
@@ -57,29 +66,59 @@ function renderLibraryCards(){
   </button>`).join("");
 }
 function openPreview(){
-  try{validate(report);if(!saveDraft())return;draw();showView("preview");}
-  catch(e){showView("data");status("راجع البيانات قبل عرض المؤشرات: "+e.message);}
+  try{validate(report);if(!saveDraft()){showView("data");highlightInvalidFields();return;}draw();showView("preview");}
+  catch(e){showView("data");highlightInvalidFields();status(translateText("راجع البيانات قبل عرض المؤشرات:")+" "+e.message);}
+}
+// Point out which inputs fail validation so the user is not left guessing.
+function highlightInvalidFields(){
+ document.querySelectorAll('[aria-invalid="true"]').forEach(el=>el.removeAttribute("aria-invalid"));
+ const targets=[];
+ if(typeof report.title!=="string"||report.title.length>250)targets.push($("title"));
+ for(const node of document.querySelectorAll("[data-period] [data-field='year']")){
+  const p=report.periods.find(item=>item.id===node.closest("[data-period]")?.dataset.period);
+  if(p&&(!/^\d{4}$/.test(String(p.year))||Number(p.year)<1000))targets.push(node);
+ }
+ for(const node of document.querySelectorAll("[data-metric] [data-field='name']")){
+  const m=report.metrics.find(item=>item.id===node.closest("[data-metric]")?.dataset.metric);
+  if(m&&!m.name.trim())targets.push(node);
+ }
+ for(const node of document.querySelectorAll("[data-entry]")){
+  const raw=node.value;
+  if(raw!==""&&(!Number.isFinite(Number(raw))||Number(raw)<0))targets.push(node);
+ }
+ for(const node of document.querySelectorAll("[data-period]")){
+  const p=report.periods.find(item=>item.id===node.dataset.period);
+  if(p&&(!p.months.length||new Set(p.months).size!==p.months.length))targets.push(node.querySelector('[data-field="preset"]'));
+ }
+ for(const node of document.querySelectorAll("[data-metric]")){
+  const m=report.metrics.find(item=>item.id===node.dataset.metric);
+  if(m?.method==="ratio")for(const field of ["numeratorId","denominatorId"]){
+   if(!report.metrics.some(item=>item.id===m[field]&&item.method!=="ratio"))targets.push(node.querySelector('[data-field="'+field+'"]'));
+  }
+ }
+ for(const node of targets)node?.setAttribute("aria-invalid","true");
+ targets[0]?.focus?.();
 }
 function newReportAndOpen(){
   if(library.length>=100)return status("الحد الأقصى 100 تقرير.");
-  saveDraft();report=blankReport();report.id=uid();library.push(report);rerender();showView("data");
+  if(!saveDraft())return;report=blankReport();report.id=uid();library.push(structuredClone(report));selectedDataMetricId=null;rerender();showView("data");
 }
-function restoreDraft(){try{const v=JSON.parse(localStorage.getItem(KEY));return validate(v);}catch{return blankReport();}}
 function status(text){$("status").textContent=text;$("libraryStatus").textContent=text;}
 function saveDraft(){
- try{validate(report);}catch(e){status("راجع البيانات قبل الحفظ: "+e.message);return false;}
- const idx=library.findIndex(r=>r.id===report.id);if(idx<0)library.push(report);else library[idx]=report;
+ if(document.querySelector('#view-data [aria-invalid="true"]')){status("صحّح الحقول المظللة قبل الحفظ.");return false;}
+ try{validate(report);}catch(e){status(translateText("راجع البيانات قبل الحفظ:")+" "+e.message);return false;}
+ const idx=library.findIndex(r=>r.id===report.id);if(idx<0)library.push(structuredClone(report));else library[idx]=structuredClone(report);
  const snapshot=structuredClone(library);
  // IndexedDB is independent of localStorage quota and stores all reports, not just the active draft.
  writeLibrary(snapshot).catch(e=>status("تعذر تحديث النسخة الاحتياطية في قاعدة البيانات: "+e.message));
  let localSaved=true;
  try{
   localStorage.setItem("report-system-v2-record:"+report.id,JSON.stringify(report));
-  localStorage.setItem(KEY,JSON.stringify(report));
+  localStorage.setItem(DRAFT_PREFIX+report.id,JSON.stringify(report));
   localStorage.setItem(LIBRARY_KEY,JSON.stringify(library));
   localStorage.setItem(ACTIVE_KEY,report.id);
  }catch(e){localSaved=false;status("الحفظ المحلي ممتلئ؛ صدّر نسخة JSON وتحقق من حفظ IndexedDB.");}
- writeDraft(structuredClone(report)).catch(()=>{});
+ writeDraft(structuredClone(report),report.id).catch(()=>{});
  renderLibrary();if(localSaved)status("تم الحفظ على هذا المتصفح.");
  return true;
 }
@@ -91,7 +130,7 @@ function renderSections(){
  $("sectionOrder").innerHTML=report.sections.map((id,index)=>`<div class="section-order-row" data-section-id="${id}"><span>${names[id]}</span><div><button type="button" class="btn secondary" data-move="-1" ${index===0?"disabled":""} aria-label="تحريك ${names[id]} للأعلى">↑</button><button type="button" class="btn secondary" data-move="1" ${index===report.sections.length-1?"disabled":""} aria-label="تحريك ${names[id]} للأسفل">↓</button></div></div>`).join("");
  report.sections.forEach(id=>$("preview").insertBefore(nodes[id],$("warnings")));
 }
-function presetOf(p){if(p.scope==="custom")return "custom";return Object.entries(PRESETS).find(([,months])=>months.length===p.months.length&&months.every(m=>p.months.includes(m)))?.[0]||"custom";}
+function presetOf(p){return Object.entries(PRESETS).find(([,months])=>months.length===p.months.length&&months.every(m=>p.months.includes(m)))?.[0]||"custom";}
 function renderMetrics(){
  $("metricEditors").innerHTML=report.metrics.map((m,i)=>{
   const bases=report.metrics.filter(x=>x.method!=="ratio"&&x.id!==m.id);
@@ -148,37 +187,39 @@ document.querySelectorAll('input[name="report-design"]').forEach(option=>{
 });
 function draw(){
  syncReportDesign();
+ const lang=locale();
  $("previewTitle").textContent=report.title.trim()||"تقرير جديد";
  $("previewSubtitle").textContent=({comparison:"مقارنة أداء",periodic:"تقرير دوري",trend:"تحليل اتجاهات",executive:"ملخص تنفيذي"})[report.kind]+" · "+TEMPLATES[report.template].label;
  let sections;
- try{sections=calc(report);}catch(e){$("warnings").textContent="راجع المدخلات: "+e.message;return;}
+ try{sections=calc(report);}catch(e){$("warnings").replaceChildren(Object.assign(document.createElement("li"),{textContent:translateText("راجع المدخلات:")+" "+e.message}));return;}
  $("summarySection").hidden=!report.sections.includes("summary");
  $("chartSection").hidden=!report.sections.includes("chart");
  $("tableSection").hidden=!report.sections.includes("table");
- $("summaryCards").innerHTML=sections.flatMap(s=>s.periods.map((p,i)=>`<div class="metric"><small>${escapeHTML(s.metric.name)} · ${escapeHTML(p.name||p.year)}</small><strong>${format(p.result)}</strong><small>${escapeHTML(s.metric.unit)} · ${p.count}/${p.expected} أشهر</small></div>`)).join("");
+ $("summaryCards").innerHTML=sections.flatMap(s=>s.periods.map((p,i)=>`<div class="metric"><small>${escapeHTML(s.metric.name)} · ${escapeHTML(p.name||p.year)}</small><strong>${format(p.result,lang)}</strong><small>${escapeHTML(s.metric.unit)} · ${p.count}/${p.expected} أشهر</small></div>`)).join("");
  const lead=sections[0];
  const leadRows=lead?comparison(lead.periods):[];
  const complete=leadRows.filter(p=>p.result!==null);
  const best=complete.length?complete.reduce((a,b)=>a.result>=b.result?a:b):null;
  $("narrative").textContent=best?
-   "يتناول التقرير "+report.periods.length+" فترة و"+report.metrics.length+" مؤشرًا. أعلى نتيجة لمؤشر "+lead.metric.name+" كانت "+format(best.result)+" "+lead.metric.unit+" خلال "+(best.name||best.year)+". النتائج وصفية ولا تشير وحدها إلى جودة الأداء.":
+   "يتناول التقرير "+report.periods.length+" فترة و"+report.metrics.length+" مؤشرًا. أعلى نتيجة لمؤشر "+lead.metric.name+" كانت "+format(best.result,lang)+" "+lead.metric.unit+" خلال "+(best.name||best.year)+". النتائج وصفية ولا تشير وحدها إلى جودة الأداء.":
    "لا تتوفر بيانات كافية لصياغة ملخص رقمي. أدخل القيم الشهرية أولًا.";
  $("charts").innerHTML=sections.map(section=>{
  const monthly=report.kind==="trend"||report.kind==="periodic";
  const values=monthly?section.periods.flatMap(p=>p.values.map(e=>e.value)):section.periods.map(p=>p.result);
  const max=Math.max(0,...values.filter(v=>v!==null));
  const rows=monthly?section.periods.flatMap(p=>p.values.map(e=>({label:(p.name||p.year)+" · "+MONTHS[e.month-1],value:e.value}))):section.periods.map(p=>({label:p.name||p.year,value:p.result}));
- return `<div class="chart-group"><h4>${escapeHTML(section.metric.name)} <small>${escapeHTML(section.metric.unit)}</small></h4>${rows.map(row=>`<div class="bar-row"><span>${escapeHTML(row.label)}</span><div class="bar-track"><div class="bar-fill" style="width:${max>0&&row.value!==null?(100*row.value/max).toFixed(2):0}%"></div></div><strong>${format(row.value)}</strong></div>`).join("")}</div>`;
+ return `<div class="chart-group"><h4>${escapeHTML(section.metric.name)} <small>${escapeHTML(section.metric.unit)}</small></h4>${rows.map(row=>`<div class="bar-row"><span>${escapeHTML(row.label)}</span><div class="bar-track"><div class="bar-fill" style="width:${max>0&&row.value!==null?(100*row.value/max).toFixed(2):0}%"></div></div><strong>${format(row.value,lang)}</strong></div>`).join("")}</div>`;
  }).join("");
  $("tables").innerHTML=sections.map(s=>`<h4>${escapeHTML(s.metric.name)} <small>${escapeHTML(s.metric.unit)}</small></h4><div class="table-scroll"><table><thead><tr><th>الفترة</th><th>النتيجة</th><th>متوسط الشهر</th><th>التغير عن الأولى</th><th>تغطية البيانات</th></tr></thead><tbody>
- ${comparison(s.periods).map(p=>`<tr><td>${escapeHTML(p.name||p.year)}</td><td>${format(p.result)}</td><td>${format(p.average)}</td><td>${p.delta===null?"—":(p.delta>0?"+":"")+format(p.delta)+"%"}</td><td>${p.count}/${p.expected}</td></tr>`).join("")}
+ ${comparison(s.periods).map(p=>`<tr><td>${escapeHTML(p.name||p.year)}</td><td>${format(p.result,lang)}</td><td>${format(p.average,lang)}</td><td>${p.delta===null?"—":(p.delta>0?"+":"")+format(p.delta,lang)+"%"}</td><td>${p.count}/${p.expected}</td></tr>`).join("")}
  </tbody></table></div>`).join("");
  const warnings=[];
  if(sections.some(s=>s.periods.some(p=>!p.complete)))warnings.push("هناك أشهر دون بيانات. النتائج تستند إلى الأشهر المدخلة فقط.");
  if(new Set(report.periods.map(p=>p.months.length)).size>1)warnings.push("الفترات مختلفة الطول؛ المقارنة بين الإجماليات قد تكون مضللة. استخدم المتوسط الشهري أو فترات متساوية.");
  if(sections.some(section=>comparison(section.periods).some(p=>!p.comparable)))warnings.push("نسب التغير غير المعروضة تعني أن إحدى الفترات ناقصة البيانات أو أن الفترات مختلفة المدة؛ راجع الأشهر قبل المقارنة.");
  if(report.metrics.some(m=>m.method==="average"))warnings.push("متوسط الأشهر غير مرجح؛ لا تستخدمه لحساب نسب تشغيلية مجمعة مثل معدل الإجابة.");
- $("warnings").textContent=warnings.join(" ");
+ // One bullet per warning keeps each notice readable instead of one run-on line.
+ $("warnings").replaceChildren(...warnings.map(text=>Object.assign(document.createElement("li"),{textContent:text})));
 }
 function rerender(){syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();scheduleSave();}
 function changeTop(id,property){$(id).addEventListener("input",e=>{report[property]=e.target.value;draw();scheduleSave();});}
@@ -221,8 +262,8 @@ $("periodEditors").addEventListener("change",e=>{
  const node=e.target.closest("[data-period]");const p=report.periods.find(p=>p.id===node?.dataset.period);if(!p)return;
  if(e.target.dataset.field==="name")p.name=e.target.value;
  if(e.target.dataset.field==="year")p.year=Number(e.target.value);
- if(e.target.dataset.field==="preset"){p.scope=e.target.value;if(e.target.value!=="custom")p.months=[...PRESETS[e.target.value]];}
- if(e.target.dataset.month){const month=Number(e.target.dataset.month);p.scope="custom";p.months=e.target.checked?[...new Set([...p.months,month])].sort((a,b)=>a-b):p.months.filter(m=>m!==month);}
+ if(e.target.dataset.field==="preset"){if(e.target.value!=="custom")p.months=[...PRESETS[e.target.value]];}
+ if(e.target.dataset.month){const month=Number(e.target.dataset.month);p.months=e.target.checked?[...new Set([...p.months,month])].sort((a,b)=>a-b):p.months.filter(m=>m!==month);}
  rerender();
 });
 $("periodEditors").addEventListener("click",e=>{
@@ -235,7 +276,8 @@ $("dataEditors").addEventListener("click",e=>{const tab=e.target.closest("[data-
 $("dataEditors").addEventListener("input",e=>{
  if(!e.target.dataset.entry)return;
  const raw=e.target.value;
- if(raw!==""&&(!Number.isFinite(Number(raw))||Number(raw)<0)){status("القيم يجب أن تكون غير سالبة.");return;}
+ if(raw!==""&&(!Number.isFinite(Number(raw))||Number(raw)<0)){e.target.setAttribute("aria-invalid","true");status("القيم يجب أن تكون غير سالبة.");return;}
+ e.target.removeAttribute("aria-invalid");
  report.entries[e.target.dataset.entry]=raw===""?null:Number(raw);draw();scheduleSave();
 });
 function download(name,content,type){
@@ -250,7 +292,7 @@ $("downloadCsv").onclick=()=>{
   const rows=[];
   for(const p of report.periods)for(const month of p.months)for(const m of report.metrics.filter(m=>m.method!=="ratio")){
    const value=report.entries[keyOf(p.id,month,m.id)];
-   if(value!==undefined&&value!==null&&value!=="")rows.push({period:p.name||p.id,year:p.year,month,metric:m.name,value});
+   if(value!==undefined&&value!==null&&value!=="")rows.push({periodId:p.id,period:p.name,year:p.year,month,metric:m.name,value});
   }
   download("report-data.csv","\uFEFF"+encodeCSV(rows),"text/csv;charset=utf-8");status("تم إعداد CSV. لا يتضمن الأشهر الفارغة.");
  }catch(e){status(e.message);}
@@ -260,31 +302,45 @@ $("importCsv").onchange=async e=>{
  try{
   if(file.size>8*1024*1024)throw Error("حجم الملف يتجاوز 8 ميجابايت.");
   const data=readFlexibleFormat(file.name.toLowerCase().endsWith(".xlsx")?await readXLSX(await file.arrayBuffer()):parseCSV(await file.text()));
-  const seen=new Set();for(const r of data){const k=JSON.stringify([r.period,r.year,r.month,r.metric]);if(seen.has(k))throw Error("صف مكرر لنفس السنة والشهر والمؤشر.");seen.add(k);}
-  const keys=[...new Set(data.map(r=>JSON.stringify([r.period,r.year])))];
-  const names=[...new Set(data.map(r=>r.metric))];
-  if(keys.length>100||names.length>30)throw Error("الملف يتجاوز الحد الأقصى للفترات أو المؤشرات.");
+  // Keep the import atomic: prepare and validate all values before requesting replacement.
+  const imported=buildImportedData(data);
+  const next={...report,...imported};
+  validate(next);
   if(!ask("سيستبدل الاستيراد الفترات والمؤشرات والقيم الحالية. هل تريد المتابعة؟"))return;
-  const periods=keys.map(k=>{const [name,year]=JSON.parse(k);return {...period(year),name,months:[...new Set(data.filter(r=>r.year===year&&r.period===name).map(r=>r.month))].sort((a,b)=>a-b)};});
-  const metrics=names.map(name=>metric(name,"","sum"));
-  const entries={};
-  for(const r of data){const p=periods.find(p=>p.year===r.year&&p.name===r.period),m=metrics.find(m=>m.name===r.metric);entries[keyOf(p.id,r.month,m.id)]=r.value;}
-  const next={...report,periods,metrics,entries};
-  validate(next);report=next;rerender();status("استوردت "+data.length+" قيمة.");
+  report=next;selectedDataMetricId=null;rerender();status("استوردت "+data.length+" قيمة.");
  }catch(err){status("تعذر استيراد البيانات: "+err.message);}
 };
 $("save").onclick=saveDraft;
 $("backup").onclick=()=>{try{validate(report);download("report-system-v2.json",JSON.stringify(report,null,2),"application/json");}catch(e){status(e.message);}};
 $("restore").onchange=async e=>{
  const file=e.target.files?.[0];e.target.value="";if(!file)return;
- try{if(file.size>5*1024*1024)throw Error("الملف كبير جدًا.");const data=validate(JSON.parse(await file.text()));if(!ask("استبدال التقرير الحالي بالنسخة الاحتياطية؟"))return;report={...data,id:report.id};rerender();status("تم استيراد النسخة.");}catch(err){status("تعذر الاستيراد: "+err.message);}
+ try{if(file.size>5*1024*1024)throw Error("الملف كبير جدًا.");const data=validate(sanitize(JSON.parse(await file.text())));if(!ask("استبدال التقرير الحالي بالنسخة الاحتياطية؟"))return;report={...data,id:report.id};rerender();status("تم استيراد النسخة.");}catch(err){status(translateText("تعذر الاستيراد:")+" "+err.message);}
 };
 $("clear").onclick=()=>{if(!ask("سيتم مسح محتوى التقرير الحالي. هل حفظت نسخة احتياطية؟"))return;const id=report.id;report=blankReport();report.id=id;rerender();};
 $("newReport").onclick=newReportAndOpen;
 $("startNewReport").onclick=newReportAndOpen;
-$("duplicateReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");saveDraft();report=structuredClone(report);report.id=uid();report.title+=" (نسخة)";library.push(report);rerender();};
-$("deleteReport").onclick=()=>{if(!ask("حذف هذا التقرير نهائيًا من المكتبة؟"))return;clearTimeout(saveTimer);const deletedId=report.id;library=library.filter(r=>r.id!==deletedId);try{localStorage.removeItem("report-system-v2-record:"+deletedId);}catch{}if(!library.length){report=blankReport();report.id=uid();library=[report];}else report=library[0];rerender();};
-$("reportSelect").onchange=e=>{const selectedId=e.target.value;saveDraft();const selected=library.find(r=>r.id===selectedId);if(selected){report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();}};
+$("duplicateReport").onclick=()=>{if(library.length>=100)return status("الحد الأقصى 100 تقرير.");if(!saveDraft())return;report=structuredClone(report);report.id=uid();report.title+=" (نسخة)";library.push(structuredClone(report));rerender();};
+$("deleteReport").onclick=()=>{
+ if(!ask("حذف هذا التقرير نهائيًا من المكتبة؟"))return;
+ clearTimeout(saveTimer);
+ const deletedId=report.id;
+ library=library.filter(r=>r.id!==deletedId);
+ try{localStorage.removeItem("report-system-v2-record:"+deletedId);localStorage.removeItem(DRAFT_PREFIX+deletedId);}catch{}
+ eraseDraft(deletedId).catch(()=>{});
+ if(!library.length){report=blankReport();report.id=uid();library=[structuredClone(report)];}
+ else report=structuredClone(library[0]);
+ rerender();
+};
+$("reportSelect").onchange=e=>{
+ const selectedId=e.target.value;
+ if(!saveDraft()){e.target.value=report.id;highlightInvalidFields();return;}
+ const selected=library.find(r=>r.id===selectedId);
+ if(selected){
+  report=structuredClone(selected);selectedDataMetricId=null;
+  localStorage.setItem(ACTIVE_KEY,report.id);
+  syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
+ }
+};
 $("backupAll").onclick=()=>{
  try{
   const json=makeLibraryBackup(library,report);
@@ -308,20 +364,24 @@ $("restoreAll").onchange=async e=>{
   await writeLibrary(restored);
   const previousIds=library.map(item=>item.id);
   library=restored;
-  report=restored[0];
+  report=structuredClone(restored[0]);selectedDataMetricId=null;
   let localSaved=true;
   try{
    localStorage.setItem(LIBRARY_KEY,JSON.stringify(restored));
-   localStorage.setItem(KEY,JSON.stringify(report));
+   localStorage.setItem(DRAFT_PREFIX+report.id,JSON.stringify(report));
    localStorage.setItem(ACTIVE_KEY,report.id);
    for(const entry of restored)localStorage.setItem("report-system-v2-record:"+entry.id,JSON.stringify(entry));
-   for(const id of previousIds)if(!restored.some(entry=>entry.id===id))localStorage.removeItem("report-system-v2-record:"+id);
+   for(const id of previousIds)if(!restored.some(entry=>entry.id===id)){
+    localStorage.removeItem("report-system-v2-record:"+id);
+    localStorage.removeItem(DRAFT_PREFIX+id);
+    eraseDraft(id).catch(()=>{});
+   }
   }catch(storageError){
    localSaved=false;
    // Avoid reading a stale library index on the next page load.
    try{localStorage.removeItem(LIBRARY_KEY);}catch{}
   }
-  writeDraft(structuredClone(report)).catch(()=>{});
+  writeDraft(structuredClone(report),report.id).catch(()=>{});
   syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();showView("library");
   status(localSaved?
    "تمت استعادة "+restored.length+" تقريرًا من النسخة الاحتياطية بنجاح.":
@@ -331,16 +391,18 @@ $("restoreAll").onchange=async e=>{
 };
 document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>{
   if(button.dataset.view==="preview")openPreview();
-  else {if(button.dataset.view==="library")saveDraft();showView(button.dataset.view);}
+  else {if(button.dataset.view==="library"&&!saveDraft()){highlightInvalidFields();return;}showView(button.dataset.view);}
 }));
-$("backLibrary").onclick=()=>{saveDraft();showView("library");};
+$("backLibrary").onclick=()=>{if(!saveDraft()){highlightInvalidFields();return;}showView("library");};
 $("backToData").onclick=()=>showView("data");
 $("continuePreview").onclick=openPreview;
 $("continuePreviewBottom").onclick=openPreview;
 $("reportCards").addEventListener("click",e=>{
   const card=e.target.closest("[data-open-report]");if(!card)return;
-  const selected=library.find(r=>r.id===card.dataset.openReport);if(!selected)return;
-  saveDraft();report=selected;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
+  const selectedId=card.dataset.openReport;
+  if(!library.some(r=>r.id===selectedId))return;
+  if(!saveDraft()){highlightInvalidFields();return;}
+  report=structuredClone(library.find(r=>r.id===selectedId));selectedDataMetricId=null;syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
   localStorage.setItem(ACTIVE_KEY,report.id);
   showView("data");
 });
@@ -349,8 +411,6 @@ $("languageToggle").addEventListener("click",()=>{
  const next=locale()==="ar"?"en":"ar";
  setLocale(next);
  renderLibrary();renderMetrics();renderPeriods();renderData();draw();renderSections();
- // Apply immediately; the mutation observer also localizes future renders.
- setLocale(next);
 });
 syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
 showView(location.hash.replace("#","")||"library");
@@ -362,16 +422,10 @@ if(needsRecovery){
   // The full library must take precedence over the legacy single-draft backup.
   if(valid.length&&!loadLibrary().length){
    library=valid.slice(0,100);
-   report=library.find(r=>r.id===localStorage.getItem(ACTIVE_KEY))||library[0];
+   report=structuredClone(library.find(r=>r.id===localStorage.getItem(ACTIVE_KEY))||library[0]);
    syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
    status("تم استرداد مكتبة التقارير من قاعدة البيانات المحلية.");
    return;
-  }
-  if(valid.length||loadLibrary().length)return;
-  const older=await readDraft();
-  if(older){report=validate(older);report.id ||= uid();library=[report];
-   syncTop();renderMetrics();renderPeriods();renderData();draw();renderSections();renderLibrary();
-   status("تم استرداد المسودة القديمة.");
   }
  }).catch(()=>{});
 }

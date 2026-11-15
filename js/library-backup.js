@@ -1,6 +1,6 @@
 // Full-library JSON backup format. Keep the existing schemaVersion:3 format
 // compatible with backup files exported by Report System 2.1.
-import {validate} from "./engine.js";
+import {validate,sanitize} from "./engine.js";
 
 export function normalizeLibrary(reports){
  if(!Array.isArray(reports)||reports.length<1||reports.length>100){
@@ -8,12 +8,13 @@ export function normalizeLibrary(reports){
  }
  const ids=new Set();
  return reports.map((item,index)=>{
-  try{validate(item);}catch(e){throw Error("التقرير رقم "+(index+1)+" غير صالح: "+e.message);}
-  if(typeof item.id!=="string"||!item.id.trim()||ids.has(item.id)){
+  const clean=sanitize(item);
+  try{validate(clean);}catch(e){throw Error("التقرير رقم "+(index+1)+" غير صالح: "+e.message);}
+  if(typeof clean.id!=="string"||!clean.id.trim()||ids.has(clean.id)){
    throw Error("معرّف التقرير رقم "+(index+1)+" مفقود أو مكرر.");
   }
-  ids.add(item.id);
-  return item;
+  ids.add(clean.id);
+  return clean;
  });
 }
 

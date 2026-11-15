@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {newReport,period,metric,calc,validate,comparison,keyOf,PRESETS,applyTemplate} from "../js/engine.js";
-import {parseCSV,readLongFormat,readFlexibleFormat,encodeCSV} from "../js/csv.js";
+import {newReport,period,metric,calc,validate,comparison,keyOf,PRESETS,applyTemplate,sanitize,uid,format} from "../js/engine.js";
+import {parseCSV,readLongFormat,readFlexibleFormat,encodeCSV,buildImportedData} from "../js/csv.js";
 
 test("three-year, two-metric comparison",()=>{
  const r=newReport();
@@ -48,7 +48,7 @@ test("CSV with quoted comma and newline parses safely",()=>{
 test("CSV named periods keep overlapping years distinct",()=>{
  const rows=[{period:"H1 2026",year:2026,month:1,metric:"Calls",value:10},{period:"Q1 2026",year:2026,month:1,metric:"Calls",value:20}];
  const parsed=readLongFormat(parseCSV(encodeCSV(rows)));
- assert.deepEqual(parsed,rows);
+ assert.deepEqual(parsed,rows.map(r=>({...r,periodId:""})));
 });
 test("CSV rejects invalid numeric values",()=>{
  assert.throws(()=>readLongFormat(parseCSV("year,month,metric,value\n2026,1,Calls,-1")),/القيمة/);
@@ -129,4 +129,52 @@ test("report designs default to executive and reject unknown values",()=>{
  }
  assert.doesNotThrow(()=>validate({...report,design:undefined}));
  assert.throws(()=>validate({...report,design:"unknown"}),/تصميم التقرير/);
+});
+
+
+test("reject repeated sections and strip unknown foreign JSON keys",()=>{
+ const r=newReport();
+ r.sections=["summary","summary"];
+ assert.throws(()=>validate(r),/أقسام/);
+ r.sections=["summary","table"];
+ r.scope="custom";r.periods[0].scope="custom";r.metrics[0].unexpected="anything";
+ const cleaned=sanitize(r);
+ assert.equal("scope" in cleaned,false);
+ assert.equal("scope" in cleaned.periods[0],false);
+ assert.equal("unexpected" in cleaned.metrics[0],false);
+ assert.doesNotThrow(()=>validate(cleaned));
+});
+
+test("CSV round-trip keeps same-year unnamed periods distinct with stable IDs",()=>{
+ const r=newReport();r.periods=[{id:"one",name:"",year:2026,months:[1]},{id:"two",name:"",year:2026,months:[1]}];
+ const rows=[{periodId:"one",period:"",year:2026,month:1,metric:"Calls",value:13},{periodId:"two",period:"",year:2026,month:1,metric:"Calls",value:29}];
+ const parsed=readFlexibleFormat(parseCSV(encodeCSV(rows)));
+ const imported=buildImportedData(parsed);
+ assert.deepEqual(imported.periods,r.periods);
+ assert.equal(imported.metrics.length,1);
+ assert.equal(imported.entries[keyOf("one",1,imported.metrics[0].id)],13);
+ assert.equal(imported.entries[keyOf("two",1,imported.metrics[0].id)],29);
+ assert.equal(Object.keys(imported.entries).length,2);
+});
+
+test("CSV import rejects duplicates and conflicting period IDs",()=>{
+ const rows=[{periodId:"first",period:"",year:2026,month:1,metric:"Calls",value:10}];
+ assert.throws(()=>buildImportedData([...rows,{...rows[0],value:20}]),/مكرر/);
+ assert.throws(()=>buildImportedData([...rows,{...rows[0],year:2027}]),/معرّف الفترة/);
+ assert.throws(()=>buildImportedData([...rows,{...rows[0],period:"another"}]),/معرّف الفترة/);
+});
+
+test("legacy CSV without periodId still imports correctly",()=>{
+ const rows=readFlexibleFormat(parseCSV("year,month,metric,value\n2026,1,Calls,10\n2027,1,Calls,20"));
+ const imported=buildImportedData(rows);
+ assert.equal(imported.periods.length,2);
+ assert.deepEqual(imported.periods.map(p=>p.name),["2026","2027"]);
+ assert.equal(Object.keys(imported.entries).length,2);
+});
+
+test("Arabic and Levantine month aliases and numeric formatting",()=>{
+ const rows=readFlexibleFormat(parseCSV("السنة,الشهر,المعاملات\n٢٠٢٦,تشرين الأول,٤٢\n٢٠٢٦,آذار,١٢"));
+ assert.deepEqual(rows.map(r=>r.month),[10,3]);
+ assert.ok(format(1234.5,"en").includes("1,234"));
+ assert.ok(typeof uid()==="string"&&uid().length>=16);
 });

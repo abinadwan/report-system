@@ -78,13 +78,13 @@ python -m http.server 5500
 **صيغة CSV الطويلة (Long format):** كل صف يمثل قيمة مؤشر واحدة في شهر واحد:
 
 ```csv
-period,year,month,metric,value
-2025,2025,1,Calls,120
-2025,2025,2,Calls,135
-H1 2026,2026,1,Calls,150
+periodId,period,year,month,metric,value
+p-2025,2025,2025,1,Calls,120
+p-2025,2025,2025,2,Calls,135
+p-2026-h1,H1 2026,2026,1,Calls,150
 ```
 
-عمود `period` اختياري في الاستيراد، لكنه مفيد إذا كانت هناك فترتان في السنة نفسها. يمكن استخدام أسماء أعمدة عربية مثل `السنة` و`الشهر`.
+يُصدر النظام عمود `periodId` الثابت تلقائيًا حتى لا تندمج الفترات غير المسماة أو المتشابهة عند إعادة استيراد CSV. العمود اختياري عند **استيراد الملفات القديمة**؛ بدون `periodId` يعتمد التجميع على `(period, year)` ولا يمكن التمييز بين فترتين غير مسمّاتين من السنة نفسها. تبقى أسماء الفترات الفارغة فارغة عند التصدير والاستيراد الحديث. يمكن استخدام أسماء أعمدة عربية مثل `السنة` و`الشهر`، كما تُقبل مرادفات الأشهر العربية الشائعة.
 
 **صيغة الأعمدة المتعددة (Wide format):**
 
@@ -231,13 +231,13 @@ Report-specific styling is isolated in `report-designs.css`; the underlying repo
 Long-format example:
 
 ```csv
-period,year,month,metric,value
-2024,2024,1,Calls,120
-2025,2025,1,Calls,150
-2026 H1,2026,1,Calls,180
+periodId,period,year,month,metric,value
+p-2024,2024,2024,1,Calls,120
+p-2025,2025,2025,1,Calls,150
+p-2026-h1,2026 H1,2026,1,Calls,180
 ```
 
-The `period` column is optional, but recommended for multiple named periods within the same year. The importer also accepts wide-format columns, such as:
+`periodId` is exported as a stable identifier, preventing same-year or unnamed periods from merging during a CSV round-trip. Older files without `periodId` remain supported and are grouped by `(period, year)`; that legacy format **cannot distinguish two unnamed periods in the same year**. An empty period name stays empty when the stable ID is present. The importer also accepts wide-format columns, such as:
 
 ```csv
 Year,Month,Calls,Answered
