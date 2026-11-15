@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report System — التقارير</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./report-designs.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report System — منصة التقارير</title><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./report-designs.css"></head>
 <body>
 <header class="topbar">
   <div class="brand-lockup">
@@ -39,7 +39,7 @@
   <section class="editor-section"><div class="section-head"><div><h2>2. فترات التحليل</h2><p>اختر أي سنوات وأشهر، ويمكن تكرار السنة لفترات مختلفة.</p></div><button type="button" id="addPeriod" class="btn secondary">+ فترة</button></div><div id="periodEditors"></div></section>
   <section class="editor-section"><div class="section-head"><div><h2>3. البيانات</h2><p>أدخل القيم يدويًا أو استورد Excel أو CSV بجدول أعمدته سنة وشهر ومؤشرات، أو بنمط year,month,metric,value.</p></div></div>
    <div class="actions"><label class="btn secondary file-button">استيراد Excel / CSV<input type="file" id="importCsv" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label><button class="btn secondary" id="downloadCsv" type="button">تنزيل CSV</button></div>
-   <p class="hint">عند استيراد CSV ستُضاف السنوات والمؤشرات الموجودة في الملف تلقائيًا. القيم المتكررة للثلاثية (سنة، شهر، مؤشر) مرفوضة لتجنب الحساب المزدوج.</p>
+   <p class="hint">عند استيراد CSV ستُضاف السنوات والمؤشرات الموجودة في الملف تلقائيًا. تُرفض القيم المكررة للفترة نفسها والشهر والمؤشر لتجنب الحساب المزدوج.</p>
    <div id="dataEditors"></div>
   </section>
   <section class="editor-section"><h2>4. محتويات التقرير</h2><div class="actions">
@@ -72,7 +72,7 @@
     <div id="summarySection" class="preview-section"><h3>ملخص الأداء</h3><div id="summaryCards" class="metrics"></div><p id="narrative" class="report-narrative"></p></div>
     <div id="chartSection" class="preview-section"><h3>مقارنة المؤشرات</h3><div id="charts"></div></div>
     <div id="tableSection" class="preview-section"><h3>تفاصيل المقارنة</h3><div id="tables"></div></div>
-    <p id="warnings" class="notice"></p>
+    <ul id="warnings" class="notice" aria-label="تحذيرات جودة البيانات"></ul>
     <footer class="report-print-footer">Report System · المؤشرات محسوبة من بيانات المستخدم · © 2026</footer>
   </article>
   <button type="button" id="print" class="btn primary print-button">طباعة / حفظ PDF</button>

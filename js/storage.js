@@ -24,8 +24,10 @@ async function transact(mode,action,storeName=STORE){
   tx.onerror=()=>{db.close();reject(tx.error);};
  });
 }
-export const writeDraft=report=>transact("readwrite",store=>store.put(report,"latest"));
-export const readDraft=()=>transact("readonly",store=>store.get("latest"));
+export const writeDraft=(report,id=report?.id)=>transact("readwrite",store=>store.put(report,String(id)));
+export const readDraft=id=>transact("readonly",store=>store.get(String(id)));
+// Remove the per-report IndexedDB mirror when the report itself is deleted.
+export const eraseDraft=id=>transact("readwrite",store=>store.delete(String(id)));
 
 // Persist the complete report library in IndexedDB as an independent recovery copy.
 // Serialize writes so an older asynchronous save cannot overwrite a newer snapshot.

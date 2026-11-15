@@ -228,3 +228,8 @@ input:not([type=checkbox]):not([type=file]):focus,select:focus{border-color:#428
  .preview-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
  .report-print-footer{display:block}
 }
+
+ul#warnings{margin:6px 0;padding-inline-start:22px}
+ul#warnings:empty{display:none}
+ul#warnings li{margin-block:4px}
+[aria-invalid="true"]{border-color:#c62828;box-shadow:0 0 0 2px rgba(198,40,40,.25)}

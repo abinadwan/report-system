@@ -36,3 +36,12 @@ test("duplicate IDs, empty libraries, and invalid reports are rejected",()=>{
  const invalid={...report,periods:[]};
  assert.throws(()=>makeLibraryBackup([invalid],invalid),/غير صالح/);
 });
+
+test("unknown report and nested fields are discarded from imported library backup",()=>{
+ const report={...newReport(),id:"sanitized"};
+ report.scope="custom";report.periods[0].scope="custom";report.metrics[0].custom="text";
+ const parsed=parseLibraryBackup(JSON.stringify({schemaVersion:3,reports:[report]}));
+ assert.equal("scope" in parsed[0],false);
+ assert.equal("scope" in parsed[0].periods[0],false);
+ assert.equal("custom" in parsed[0].metrics[0],false);
+});

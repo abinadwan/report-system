@@ -8,7 +8,12 @@ export const TEMPLATES = {
   projects:{label:"إدارة المشاريع",metrics:[{name:"المهام المكتملة",unit:"مهمة",method:"sum"},{name:"المهام الجديدة",unit:"مهمة",method:"sum"}]},
   sales:{label:"المبيعات",metrics:[{name:"إجمالي المبيعات",unit:"ر.س",method:"sum"},{name:"عدد الطلبات",unit:"طلب",method:"sum"}]}
 };
-export function uid(){return globalThis.crypto?.randomUUID?.() || Date.now().toString(36)+"-"+Math.random().toString(36).slice(2);}
+export function uid(){
+ if(globalThis.crypto?.randomUUID)return globalThis.crypto.randomUUID();
+ // getRandomValues is available in insecure HTTP contexts on modern browsers.
+ if(globalThis.crypto?.getRandomValues){const bytes=globalThis.crypto.getRandomValues(new Uint8Array(16));return [...bytes].map(b=>b.toString(16).padStart(2,"0")).join("");}
+ throw Error("لا يمكن إنشاء معرّف آمن في هذا المتصفح؛ واجهة التشفير غير متاحة.");
+}
 export function period(year=new Date().getFullYear()){return {id:uid(),name:"",year,months:[...PRESETS.year]};}
 export function metric(name="مؤشر جديد",unit="وحدة",method="sum"){return {id:uid(),name,unit,method};}
 export function newReport(){return {schemaVersion:3,title:"تقرير أداء جديد",kind:"comparison",template:"general",periods:[period(),period(new Date().getFullYear()-1)],metrics:[metric("عدد المعاملات","معاملة","sum")],entries:{},sections:["summary","chart","table"],design:"executive"};}
@@ -18,8 +23,19 @@ export function applyTemplate(report,key){
  incoming.forEach((m,i)=>{const source=TEMPLATES[key].metrics[i];if(source.method==="ratio"){m.numeratorId=incoming.find(x=>x.name===source.numeratorName)?.id;m.denominatorId=incoming.find(x=>x.name===source.denominatorName)?.id;m.boundedRatio=Boolean(source.boundedRatio);}});
  return {...report,template:key,metrics:incoming,entries:{}}; // user must explicitly confirm replacing values
 }
+const ALLOWED_REPORT_KEYS=new Set(["schemaVersion","id","title","kind","template","periods","metrics","entries","sections","design"]);
+const ALLOWED_PERIOD_KEYS=new Set(["id","name","year","months"]);
+const ALLOWED_METRIC_KEYS=new Set(["id","name","unit","method","numeratorId","denominatorId","boundedRatio"]);
+// Unknown fields from hand-edited or foreign JSON are dropped so they never reach rendering code.
+export function sanitize(report){
+ if(!report||typeof report!=="object"||Array.isArray(report))return report;
+ const clean=Object.fromEntries(Object.entries(report).filter(([key])=>ALLOWED_REPORT_KEYS.has(key)));
+ if(Array.isArray(clean.periods))clean.periods=clean.periods.map(p=>p&&typeof p==="object"?Object.fromEntries(Object.entries(p).filter(([key])=>ALLOWED_PERIOD_KEYS.has(key))):p);
+ if(Array.isArray(clean.metrics))clean.metrics=clean.metrics.map(m=>m&&typeof m==="object"?Object.fromEntries(Object.entries(m).filter(([key])=>ALLOWED_METRIC_KEYS.has(key))):m);
+ return clean;
+}
 export function validate(report){
- if(!report || typeof report!=="object" || report.schemaVersion!==3)throw Error("صيغة التقرير غير مدعومة.");
+ if(!report || typeof report!=="object" || Array.isArray(report) || report.schemaVersion!==3)throw Error("صيغة التقرير غير مدعومة.");
  if(typeof report.title!=="string" || report.title.length>250)throw Error("العنوان غير صالح.");
  if(report.design!==undefined&&!REPORT_DESIGNS.includes(report.design))throw Error("تصميم التقرير غير صالح.");
  if(!["comparison","periodic","trend","executive"].includes(report.kind))throw Error("هدف التقرير غير معروف.");
@@ -27,16 +43,16 @@ export function validate(report){
  if(!Array.isArray(report.periods)||!report.periods.length||report.periods.length>100)throw Error("عدد الفترات غير صالح.");
  if(!Array.isArray(report.metrics)||!report.metrics.length||report.metrics.length>30)throw Error("عدد المؤشرات غير صالح.");
  if(!report.entries||typeof report.entries!=="object"||Array.isArray(report.entries))throw Error("بيانات المؤشرات غير صالحة.");
- if(!Array.isArray(report.sections)||report.sections.some(s=>!["summary","chart","table"].includes(s)))throw Error("أقسام التقرير غير صالحة.");
+ if(!Array.isArray(report.sections)||report.sections.some(s=>!["summary","chart","table"].includes(s))||new Set(report.sections).size!==report.sections.length)throw Error("أقسام التقرير غير صالحة.");
  const ids=new Set();
  for(const p of report.periods){
-   if(typeof p.id!=="string"||!p.id||ids.has(p.id)||typeof p.name!=="string"||p.name.length>100)throw Error("معرّفات الفترات غير صالحة.");
+   if(!p||typeof p!=="object"||Array.isArray(p)||typeof p.id!=="string"||!p.id||p.id.length>100||ids.has(p.id)||typeof p.name!=="string"||p.name.length>100)throw Error("معرّفات الفترات غير صالحة.");
    ids.add(p.id);
    if(!Number.isInteger(Number(p.year))||!/^[0-9]{4}$/.test(String(p.year))||Number(p.year)<1000)throw Error("الرجاء إدخال سنة صحيحة.");
    if(!Array.isArray(p.months)||!p.months.length||p.months.length>12||new Set(p.months).size!==p.months.length||p.months.some(m=>!Number.isInteger(m)||m<1||m>12))throw Error("الأشهر المختارة غير صالحة.");
  }
  for(const m of report.metrics){
-   if(typeof m.id!=="string"||!m.id||ids.has(m.id)||typeof m.name!=="string"||!m.name.trim()||m.name.length>100||typeof m.unit!=="string"||m.unit.length>40||!["sum","average","ratio"].includes(m.method))throw Error("تعريف مؤشر غير صالح.");
+   if(!m||typeof m!=="object"||Array.isArray(m)||typeof m.id!=="string"||!m.id||m.id.length>100||ids.has(m.id)||typeof m.name!=="string"||!m.name.trim()||m.name.length>100||typeof m.unit!=="string"||m.unit.length>40||!["sum","average","ratio"].includes(m.method))throw Error("تعريف مؤشر غير صالح.");
    ids.add(m.id);
  }
  for(const m of report.metrics){
@@ -96,4 +112,5 @@ export function comparison(rows){
    return {...row,delta,comparable};
  });
 }
-export function format(n){return n===null||n===undefined?"—":new Intl.NumberFormat(typeof document!=="undefined"&&document.documentElement.lang==="en"?"en-US":"ar-SA",{maximumFractionDigits:2}).format(n);}
+// Language is passed explicitly so engine functions stay free of DOM access.
+export function format(n,lang="ar"){return n===null||n===undefined?"—":new Intl.NumberFormat(lang==="en"?"en-US":"ar-SA",{maximumFractionDigits:2}).format(n);}

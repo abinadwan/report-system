@@ -317,3 +317,64 @@ test("report design options translate to English without changing chosen theme",
  await expect(page.locator(".design-option").filter({has:page.locator('input[value="formal"]')})).toContainText("Formal");
  await expect(page.locator("#preview")).toHaveAttribute("data-design","analytical");
 });
+
+
+test("CSV export/import preserves two unnamed periods from the same year",async ({page})=>{
+ page.on("dialog",dialog=>dialog.accept());
+ const csv="periodId,period,year,month,metric,value\np1,,2026,1,Calls,10\np2,,2026,1,Calls,20\n";
+ await page.locator("#importCsv").setInputFiles({name:"source.csv",mimeType:"text/csv",buffer:Buffer.from(csv)});
+ await expect(page.locator('#periodEditors [data-field="name"]')).toHaveCount(2);
+ await expect(page.locator('#periodEditors [data-field="name"]').first()).toHaveValue("");
+ await expect(page.locator('#periodEditors [data-field="name"]').last()).toHaveValue("");
+ await expect(page.locator("#summaryCards .metric")).toHaveCount(2);
+ const first=await page.locator("#summaryCards .metric strong").first().textContent();
+ const second=await page.locator("#summaryCards .metric strong").last().textContent();
+ expect(first).not.toBe(second);
+ const [download]=await Promise.all([page.waitForEvent("download"),page.locator("#downloadCsv").click()]);
+ const csvRoundTrip=await readFile(await download.path());
+ expect(csvRoundTrip.toString("utf8")).toContain("periodId,period,year,month,metric,value");
+ await page.locator("#importCsv").setInputFiles({name:"roundtrip.csv",mimeType:"text/csv",buffer:csvRoundTrip});
+ await expect(page.locator('#periodEditors [data-field="name"]')).toHaveCount(2);
+ await expect(page.locator("#summaryCards .metric strong").first()).toHaveText(first.trim());
+ await expect(page.locator("#summaryCards .metric strong").last()).toHaveText(second.trim());
+});
+
+test("invalid year is highlighted and prevents entering preview",async ({page})=>{
+ const year=page.locator('#periodEditors [data-field="year"]').first();
+ await year.fill("0");
+ await year.dispatchEvent("change");
+ await page.locator("#continuePreview").click();
+ await expect(page.locator("#view-data")).toBeVisible();
+ await expect(page.locator('#periodEditors [data-field="year"]').first()).toHaveAttribute("aria-invalid","true");
+ await expect(page.locator("#status")).toContainText("سنة صحيحة");
+ await page.locator('#periodEditors [data-field="year"]').first().fill("2026");
+ await page.locator('#periodEditors [data-field="year"]').first().dispatchEvent("change");
+ await page.locator("#continuePreview").click();
+ await expect(page.locator("#view-preview")).toBeVisible();
+});
+
+test("imported duplicate sections are rejected without replacing the current report",async ({page})=>{
+ const original=await page.locator("#title").inputValue();
+ // The initial report may not have been persisted yet.
+ await page.locator("#save").click();
+ const good=await page.evaluate(()=>JSON.parse(localStorage.getItem("report-system-v2-library"))[0]);
+ const invalid={...good,sections:["summary","summary"]};
+ await page.locator("#restore").setInputFiles({name:"duplicate.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(invalid))});
+ await expect(page.locator("#status")).toContainText("تعذر الاستيراد");
+ await expect(page.locator("#title")).toHaveValue(original);
+});
+
+test("legacy global draft cannot override the active report",async ({page})=>{
+ await page.locator("#title").fill("Active report");
+ await page.locator("#save").click();
+ await page.evaluate(()=>localStorage.setItem("report-system-v2-v3-draft",JSON.stringify({title:"Stale global draft"})));
+ await page.reload();
+ await page.locator("#nav-data").click();
+ await expect(page.locator("#title")).toHaveValue("Active report");
+});
+
+test("preview warnings are separate list items",async ({page})=>{
+ await page.locator('#periodEditors .period-card').first().locator('[data-field="preset"]').selectOption("h1");
+ await page.locator("#continuePreview").click();
+ await expect(page.locator("#warnings li")).toHaveCount(3);
+});
